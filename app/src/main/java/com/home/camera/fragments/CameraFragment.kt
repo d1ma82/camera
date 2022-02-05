@@ -27,6 +27,7 @@ class CameraFragment: Fragment() {
 
     override fun onStart() {
         super.onStart()
+        cameraWrapper.select("android", "back")
         val str = cameraWrapper.greeting("kotlin")
         Toast.makeText(context, str, Toast.LENGTH_LONG).show()
     }

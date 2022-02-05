@@ -5,7 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "D:\\AndroidNDK\\android-ndk-r21e\\sysroot\\usr\\include",
-                "D:/AndroidNDK/android-ndk-r21e/sysroot/usr/include/x86_64-linux-android"
+                "D:/AndroidNDK/android-ndk-r21e/sysroot/usr/include/x86_64-linux-android",
+                "${workspaceFolder}/include"
             ],
             "defines": [
                 "_DEBUG",
