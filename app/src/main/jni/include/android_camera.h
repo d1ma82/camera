@@ -3,6 +3,9 @@
 
 #include <camera/NdkCameraManager.h>
 #include <android/native_window_jni.h>
+#include <functional>
+
+using native_window_ptr = std::unique_ptr<ANativeWindow, std::function<void(ANativeWindow*)>>;
 
 class NDKCamera {
 private:
@@ -10,9 +13,16 @@ private:
 
     ACameraManager* manager = nullptr;
     ACameraIdList* id_list = nullptr;
+    ACameraDevice* device = nullptr;
     ACameraMetadata* metadata = nullptr;
+    ACameraCaptureSession* session = nullptr;
+
+    native_window_ptr camera_window = nullptr;  // android side preview 
 
     JNIEnv* env = nullptr;
+    const  char* cam_id = nullptr;
+    // sequence number from capture session
+    int sequence = 0;
 
     NDKCamera(){};
     NDKCamera(JNIEnv* env);
@@ -26,8 +36,10 @@ public:
     NDKCamera& operator=(NDKCamera&&) = delete;
     ~NDKCamera();  
 
-    static void new_instance(JNIEnv* env);
+    static void instance(JNIEnv* env);
     static void select_camera(const char* id);
+    static void best_resolution(int32_t in_out_resolution[2]);
+    static void repeat(jobject surface);
 };
 
 #endif
