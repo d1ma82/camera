@@ -12,7 +12,6 @@ class CameraFragment: Fragment(), TextureView.SurfaceTextureListener{
 
     private val logTag = "CameraFragment"
     private var cameraHandle:Long = 0
-    //private lateinit var compatibleResolution : IntArray
     private lateinit var binding: FragmentCameraBinding
     private lateinit var surface: Surface
     private val cameraWrapper = CameraWrapper()
@@ -40,21 +39,21 @@ class CameraFragment: Fragment(), TextureView.SurfaceTextureListener{
 
     override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
 
-        Log.i(logTag, "onSurfaceTextureAvailable $width x $height")
-        cameraHandle = cameraWrapper.create("back",width, height)
-        val compatibleResolution = cameraWrapper.compatiblePreviewResolution(cameraHandle)
+        Log.d(logTag, "onSurfaceTextureAvailable $width x $height")
+        cameraHandle = cameraWrapper.create("back")
+        val compatibleResolution = cameraWrapper.compatibleResolution(cameraHandle, width, height)
         surfaceTexture.setDefaultBufferSize(compatibleResolution[0], compatibleResolution[1])
         surface = Surface(surfaceTexture)
         cameraWrapper.onPreviewSurfaceCreated(cameraHandle, surface)
     }
 
     override fun onSurfaceTextureSizeChanged(p0: SurfaceTexture, width: Int, height: Int) {
-        Log.i(logTag, "onSurfaceTextureSizeChanged $width x $height")
+        Log.d(logTag, "onSurfaceTextureSizeChanged $width x $height")
     }
 
     override fun onSurfaceTextureDestroyed(p0: SurfaceTexture): Boolean {
 
-        Log.i(logTag, "onSurfaceTextureDestroyed")
+        Log.d(logTag, "onSurfaceTextureDestroyed")
         cameraWrapper.onPreviewSurfaceDestroyed(cameraHandle, surface)
         cameraWrapper.delete(cameraHandle)
         cameraHandle = 0
@@ -62,6 +61,6 @@ class CameraFragment: Fragment(), TextureView.SurfaceTextureListener{
     }
 
     override fun onSurfaceTextureUpdated(p0: SurfaceTexture) {
-        Log.i(logTag, "onSurfaceTextureUpdated")
+        Log.d(logTag, "onSurfaceTextureUpdated")
     }
 }

@@ -3,8 +3,9 @@
 
 #include <stdint.h>
 
-void prepare (uint32_t tex_id);
-void draw_frame(float texMat[16]);
-void surface_changes(int32_t width, int32_t height);
-
+namespace ogl {
+    void init_surface (int32_t tex_id);
+    void draw_frame(int32_t width, int32_t height, const float texMat[]);
+    void surface_changes();
+}
 #endif

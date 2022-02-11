@@ -19,6 +19,8 @@ struct RequestInfo {
     int session_sequence;
 };
 
+enum RequestIndex{PREVIEW_IDX, SHORT_IDX, REQUESTS_COUNT};
+
 class NDKCamera {
 private:
     camera_status_t status = ACAMERA_OK;
@@ -30,15 +32,13 @@ private:
     ACameraCaptureSession* session = nullptr;
     ACaptureSessionOutputContainer* container = nullptr;
     
-    std::vector<RequestInfo*> requests;
+    std::vector<RequestInfo> requests;
    
     const  char* cam_id = nullptr;
     uint32_t facing = ACAMERA_LENS_FACING_BACK;
     uint32_t orientation = 0;
-
-    void calc_compatible_preview_size(int32_t requested_width, int32_t requested_height) noexcept;
 public:
-    NDKCamera(const char* facing, int32_t requested_width, int32_t requested_height);
+    NDKCamera(const char* facing);
    // copy-move disabled
     NDKCamera(const NDKCamera&) = delete;
     NDKCamera(NDKCamera&&) = delete;
@@ -49,10 +49,9 @@ public:
     void select_camera(const char* facing) noexcept;
     void create_session(ANativeWindow* window) noexcept;
     void start_preview(bool start) noexcept;
-    void compatible_preview_size(int32_t compatible_size[2]) noexcept;
-  //  void repeat(uint32_t tex_id, jobject preview) noexcept;
-   // static void on_draw(float texMat[16]) noexcept;
-   // static void surface_changes(int32_t width, int32_t height) noexcept;
+    void calc_compatible_preview_size(int32_t width, int32_t height, int32_t out_compatible_res[2]) noexcept;
+    void init_surface(int32_t texture_id) noexcept;
+    void draw_frame(int32_t width, int32_t height, const float texture_mat[]);
 };
 
 #endif

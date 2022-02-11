@@ -12,6 +12,15 @@
         <action
             android:id="@+id/action_permission_camera"
             app:destination="@+id/camera_fragment" />
+
+        <action
+            android:id="@+id/action_permission_camera_gl"
+            app:destination="@+id/camera_fragment_gl"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/camera_fragment_gl"
+        android:name="com.home.camera.fragments.CameraFragmentGL">
     </fragment>
 
     <fragment

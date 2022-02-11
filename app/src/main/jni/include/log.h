@@ -1,20 +1,26 @@
 #ifndef _CAMERA_LOG_H
 #define _CAMERA_LOG_H
 
-#define DEBUG
 #include <android/log.h>
 
-#ifdef DEBUG
-#define LOGI(...) (__android_log_print(ANDROID_LOG_INFO, "LOGI: " __FILE__, __VA_ARGS__))
-#define LOGD(...) (__android_log_print(ANDROID_LOG_DEBUG, "LOGD: " __FILE__, __VA_ARGS__))
-#else
-#define LOGI(...) (0);
-#define LOGD(...) (0);
-#endif
+#define DEBUG
 
+#define LOGI(...) (__android_log_print(ANDROID_LOG_INFO, "LOGI: " __FILE__, __VA_ARGS__));
+
+#ifdef DEBUG
+#define LOGD(...) (__android_log_print(ANDROID_LOG_DEBUG, "LOGD: " __FILE__, __VA_ARGS__));
 #define ASSERT(cond, fmt, ...)                                \
   if (!(cond)) {                                              \
-    __android_log_assert(#cond, "LOG_TAG", fmt, ##__VA_ARGS__); \
+    __android_log_assert(#cond, "ASSERT", fmt, ##__VA_ARGS__); \
   }
+#define CALL(func) status = func; \
+        ASSERT(status == 0, "%d error code returned by %s", status, #func)
+#else
+#define LOGD(...);
+#define ASSERT(cond, fmt, ...);
+#define CALL(func);
+#endif
+
+
 
 #endif

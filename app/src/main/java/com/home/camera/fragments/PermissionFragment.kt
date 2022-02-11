@@ -20,7 +20,7 @@ class PermissionFragment: Fragment() {
         super.onCreate(savedInstanceState)
 
         if (hasPermissions(requireContext())) {
-            findNavController().navigate(R.id.action_permission_camera)
+            findNavController().navigate(R.id.action_permission_camera_gl)
         } else {
             requestPermissions(PERMISSIONS_REQUIRED, PERMISSION_REQUEST_CODE)
         }
@@ -35,7 +35,7 @@ class PermissionFragment: Fragment() {
 
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                findNavController().navigate(R.id.action_permission_camera)
+                findNavController().navigate(R.id.action_permission_camera_gl)
             } else {
                 Toast.makeText(context, "Permission denied", Toast.LENGTH_LONG).show()
             }

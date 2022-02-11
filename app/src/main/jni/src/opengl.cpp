@@ -53,8 +53,6 @@ float texture[] {
 
 GLuint indices[] { 2, 1, 0, 0, 3, 2 };
 
-static int32_t width=1, height=1;
-
 GLuint create_shader(const char* src, GLenum type) {
 
     GLuint shader = glCreateShader(type);
@@ -85,7 +83,7 @@ GLuint create_program(GLuint vertex_shader, GLuint fragment_shader) {
     return prog;
 }
 
-void prepare (uint32_t tex_id) {
+void ogl::init_surface (int32_t tex_id) {
 
     texture_id = tex_id;
     vertex_shader = create_shader(vertex_shader_src, GL_VERTEX_SHADER);
@@ -104,7 +102,7 @@ void prepare (uint32_t tex_id) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
 }
 
-void draw_frame(float texMat[16]) {
+void ogl::draw_frame(int32_t width, int32_t height, const float texMat[]) {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glClearColor(0,0,0,1);
@@ -130,8 +128,6 @@ void draw_frame(float texMat[16]) {
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, indices);
 }
 
-void surface_changes(int32_t w, int32_t h) {
+void ogl::surface_changes() {
 
-    width = w;
-    height = h;
 }
