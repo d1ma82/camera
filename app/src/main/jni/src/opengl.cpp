@@ -1,22 +1,25 @@
 #include "opengl.h"
 #include "log.h"
-#include <GLES3/gl3.h>
+#include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <vector>
 
 GLuint texture_id, vertex_shader, fragment_shader, program;
-GLint vertex_position, uvs, tex_sampler;
+GLint vertex_position, uvs, tex_sampler, tex_matrix;
 GLuint buffers[2];
+
+static int32_t width = 0, height = 0;
 
 static const char* vertex_shader_src = R"(
     
     attribute vec4 vertexPosition;
     attribute vec2 uvs;
+    uniform mat4 texMatrix;
     varying vec2 varUvs;
     
     void main()
     {
-        varUvs = uvs;
+        varUvs = (texMatrix * vec4(uvs.x, uvs.y, 0, 1.0)).xy;
         gl_Position = vertexPosition;
     }
 )";
@@ -35,23 +38,16 @@ static const char* fragment_shader_src = R"(
     }    
 )";
 
-float vertices[] {
+static float vertices[] {
             // x, y, z, u, v
             -1, -1, 0, 0, 0,
-            -1, 1, 0, 0, 1,
-            1, 1, 0, 1, 1,
-            1, -1, 0, 1, 0
-    };
-
-float texture[] {
-        //  u v
-            0,0,
-            0,1,
-            1,1,
-            1,0
+            -1,  1, 0, 0, 1,
+             1,  1, 0, 1, 1,
+             1, -1, 0, 1, 0
 };
 
-GLuint indices[] { 2, 1, 0, 0, 3, 2 };
+static GLuint indices[] { 2, 1, 0, 0, 3, 2 };
+//static GLuint indices[] { 3, 2, 0, 0, 1, 2 };
 
 GLuint create_shader(const char* src, GLenum type) {
 
@@ -83,9 +79,10 @@ GLuint create_program(GLuint vertex_shader, GLuint fragment_shader) {
     return prog;
 }
 
-void ogl::init_surface (int32_t tex_id) {
+void ogl::init_surface (int32_t w, int32_t h, int32_t tex_id) {
 
     texture_id = tex_id;
+    width = w; height = h;
     vertex_shader = create_shader(vertex_shader_src, GL_VERTEX_SHADER);
     fragment_shader = create_shader(fragment_shader_src, GL_FRAGMENT_SHADER);
     program = create_program(vertex_shader, fragment_shader);
@@ -93,6 +90,10 @@ void ogl::init_surface (int32_t tex_id) {
     vertex_position = glGetAttribLocation(program, "vertexPosition");
     uvs =             glGetAttribLocation(program, "uvs");
     tex_sampler =     glGetUniformLocation(program, "texSampler");
+    tex_matrix =      glGetUniformLocation(program, "texMatrix");
+
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glGenBuffers(2, buffers);
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
@@ -102,32 +103,30 @@ void ogl::init_surface (int32_t tex_id) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
 }
 
-void ogl::draw_frame(int32_t width, int32_t height, const float texMat[]) {
+void ogl::draw_frame(const float texMat[]) {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glClearColor(0,0,0,1);
 
     glUseProgram(program);
 
-    glEnableVertexAttribArray(vertex_position);
-    glVertexAttribPointer(vertex_position, 3, GL_FLOAT, GL_FALSE, 0, vertices);
-
-    glEnableVertexAttribArray(uvs);
-    glVertexAttribPointer(uvs, 2, GL_FLOAT, GL_FALSE, 0, texture);
-
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, texture_id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
+    glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glUniform1i(tex_sampler, 0);
 
+    glUniformMatrix4fv(tex_matrix, 1, false, texMat);
+
+    glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
+    glEnableVertexAttribArray(vertex_position);
+    glVertexAttribPointer(vertex_position, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, 0);
+    glEnableVertexAttribArray(uvs);
+    glVertexAttribPointer(uvs, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void *)(3 * sizeof(float)));
+    
     glViewport(0, 0, width, height);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, indices);
-}
-
-void ogl::surface_changes() {
-
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[1]);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }

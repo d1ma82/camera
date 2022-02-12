@@ -6,7 +6,6 @@ CameraEngine::CameraEngine(JNIEnv* env, jobject instance, jstring facing):
     env(env), 
     instance(instance), 
     requested_facing(facing),
-    surface(nullptr), 
     camera(nullptr) {
 
     jboolean is_copy;
@@ -21,16 +20,11 @@ CameraEngine::~CameraEngine() {
         delete camera;
         camera = nullptr;
     }
-
-    if (surface) {
-        env->DeleteGlobalRef(surface);
-        surface = nullptr;
-    }
 }
 
 void CameraEngine::create_session(jobject surface){
 
-    this->surface = env->NewGlobalRef(surface);
+   // this->surface = env->NewGlobalRef(surface);
     camera->create_session(ANativeWindow_fromSurface(env, surface));
 }
 
@@ -44,10 +38,10 @@ void CameraEngine::start_preview(bool start){
     camera->start_preview(start);
 }
 
-void CameraEngine::draw_frame(jint width, jint height, const jfloatArray texMatArray) {
+void CameraEngine::draw_frame(const jfloatArray texMatArray) {
 
     float* arr = env->GetFloatArrayElements(texMatArray, 0);
-    camera->draw_frame(width, height, arr);
+    camera->draw_frame(arr);
     env->ReleaseFloatArrayElements(texMatArray, arr, 0);
 }
 
@@ -63,6 +57,3 @@ const jintArray CameraEngine::get_compatible_res(jint width, jint height) const{
 int32_t CameraEngine::get_sensor_orientation(){
     return 0;
 }
-
-jobject CameraEngine::get_surface(){
-    return nullptr;}

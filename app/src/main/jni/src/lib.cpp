@@ -57,10 +57,12 @@ extern "C" JNIEXPORT void JNICALL Java_com_home_camera_CameraWrapper_onPreviewSu
     JNIEnv* env, 
     jobject instance,
     jlong cam_obj,
-    jobject surface
+    jobject surface,
+    jint texture_id
 ) {
     ASSERT(cam_obj && (jlong)engine == cam_obj, "NativeObject should not be null Pointer")
     CameraEngine* app = reinterpret_cast<CameraEngine*>(cam_obj);
+    if (texture_id > 0) app->init_surface(texture_id);
     app->create_session(surface);
     app->start_preview(true);
 }
@@ -93,40 +95,14 @@ extern "C" JNIEXPORT jintArray JNICALL Java_com_home_camera_CameraWrapper_compat
 
         // With Open GL surface
 
-extern "C" JNIEXPORT void Java_com_home_camera_CameraWrapper_onSurfaceCreated(
-    JNIEnv* env, 
-    jobject instance,
-    jlong cam_obj,
-    jint texture_id
-) {
-    ASSERT(cam_obj && (jlong)engine == cam_obj, "NativeObject should not be null Pointer")
-    CameraEngine* app = reinterpret_cast<CameraEngine*>(cam_obj);
-    app->init_surface(texture_id);
-}
-
-extern "C" JNIEXPORT void Java_com_home_camera_CameraWrapper_onSurfaceChanged(
-    JNIEnv* env, 
-    jobject instance,
-    jlong cam_obj,
-    jobject surface
-) {
-    ASSERT(cam_obj && (jlong)engine == cam_obj, "NativeObject should not be null Pointer")
-    CameraEngine* app = reinterpret_cast<CameraEngine*>(cam_obj);
-
-    app->create_session(surface);
-    app->start_preview(true);
-}
-
 extern "C" JNIEXPORT void Java_com_home_camera_CameraWrapper_onDrawFrame(
     JNIEnv* env, 
     jobject instance,
     jlong cam_obj,
-    jint width,
-    jint height,
     jfloatArray texMatArray
 ) {
     ASSERT(cam_obj && (jlong)engine == cam_obj, "NativeObject should not be null Pointer")
     CameraEngine* app = reinterpret_cast<CameraEngine*>(cam_obj);
-    app->draw_frame(width, height, texMatArray);
+    app->draw_frame(texMatArray);
 }
 

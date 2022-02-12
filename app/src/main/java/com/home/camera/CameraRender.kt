@@ -36,7 +36,7 @@ class CameraRender: GLSurfaceView.Renderer  {
         surfaceTexture.setOnFrameAvailableListener {
             synchronized(lock) {frameAvailable = true}
         }
-        cameraWrapper.onSurfaceCreated(cameraHandle, textures[0])
+       // cameraWrapper.onSurfaceCreated(cameraHandle, textures[0])
     }
 
     override fun onSurfaceChanged(p0: GL10?, w: Int, h: Int) {
@@ -48,7 +48,7 @@ class CameraRender: GLSurfaceView.Renderer  {
         compatibleResolution = cameraWrapper.compatibleResolution(cameraHandle, w, h)
         surfaceTexture.setDefaultBufferSize(compatibleResolution[0], compatibleResolution[1])
         val surface = Surface(surfaceTexture)
-        cameraWrapper.onSurfaceChanged(cameraHandle, surface)
+      //  cameraWrapper.onSurfaceChanged(cameraHandle, surface)
         repeating = true
     }
 
@@ -62,6 +62,6 @@ class CameraRender: GLSurfaceView.Renderer  {
                 frameAvailable = false
             }
         }
-        cameraWrapper.onDrawFrame(cameraHandle, compatibleResolution[0], compatibleResolution[1], texMatrix)
+        cameraWrapper.onDrawFrame(cameraHandle, texMatrix)
     }
 }

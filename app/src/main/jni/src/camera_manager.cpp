@@ -4,6 +4,8 @@
 #include <memory>
 #include <media/NdkImage.h>
 
+static int32_t comp_width = 0, comp_height = 0;
+
 void OnCameraAvailable(void* ctx, const char* id) {}
 void OnCameraUnavailable(void* ctx, const char* id) {}
 
@@ -157,6 +159,7 @@ void NDKCamera::create_session(ANativeWindow* window) noexcept {
     };
     CALL(ACaptureRequest_addTarget(requests[PREVIEW_IDX].request.get(), requests[PREVIEW_IDX].target.get()))
     CALL(ACameraDevice_createCaptureSession(device, container, &sessionStateCallbacks, &session))
+    LOGI("Preview session created, %d", status)
 }
 
 void NDKCamera::start_preview(bool start) noexcept {
@@ -196,18 +199,21 @@ void NDKCamera::calc_compatible_preview_size(int32_t width, int32_t height, int3
             }
             LOGI("AVAILABLE_STREAM_CONFIGURATIONS, %d x %d", entry.data.i32[i+1], entry.data.i32[i+2])
         }
-    }
-    out_compatible_res[0] = entry.data.i32[j+1];
-    out_compatible_res[1] = entry.data.i32[j+2];
-    LOGI("Compatible resolution, %d x %d", entry.data.i32[j+1], entry.data.i32[j+2])
+    }    
+    comp_width  = width < height ? entry.data.i32[j+2]: entry.data.i32[j+1];
+    comp_height = width < height ? entry.data.i32[j+1]: entry.data.i32[j+2];
+    out_compatible_res[0] = comp_width;
+    out_compatible_res[1] = comp_height;
+    LOGI("Compatible resolution, %d x %d", comp_width, comp_height)
 }
 
 void NDKCamera::init_surface(int32_t texture_id) noexcept {
 
-    ogl::init_surface(texture_id);
+    ogl::init_surface(comp_width, comp_height, texture_id);
+    LOGI("Open GL texture_id= %d", texture_id)
 }
 
-void NDKCamera::draw_frame(int32_t width, int32_t height, const float texture_mat[]) {
+void NDKCamera::draw_frame(const float texture_mat[]) {
 
-    ogl::draw_frame(width, height, texture_mat);
+    ogl::draw_frame(texture_mat);
 }

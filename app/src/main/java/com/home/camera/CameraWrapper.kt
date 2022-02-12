@@ -10,13 +10,9 @@ class CameraWrapper {
     external fun create(cameraFacing: String):Long
     external fun delete(camera: Long)
     external fun compatibleResolution(camera: Long, width: Int, height: Int):IntArray
-    external fun onPreviewSurfaceCreated(camera: Long, surface: Surface)
+    external fun onPreviewSurfaceCreated(camera: Long, surface: Surface, texture_id: Int = 0)
     external fun onPreviewSurfaceDestroyed(camera: Long, surface: Surface)
-
-    // open gl version
-    external fun onSurfaceCreated(camera: Long, texture_id: Int)
-    external fun onSurfaceChanged(camera: Long, surface: Surface)
-    external fun onDrawFrame(camera: Long, width: Int, height: Int, tex_mat: FloatArray)
+    external fun onDrawFrame(camera: Long, tex_mat: FloatArray)
 
     init {
         val greet = greeting("Kotlin")

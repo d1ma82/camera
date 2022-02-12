@@ -10,7 +10,6 @@ private:
     JNIEnv* env;
     jobject instance;
     jstring requested_facing;
-    jobject surface;
     NDKCamera* camera;
     int32_t compatible_res[3] {0,0,0};
 
@@ -21,10 +20,9 @@ public:
     void create_session(jobject surface);
     void init_surface(int32_t texture_id);
     void start_preview(bool start);
-    void draw_frame(jint width, jint height, const jfloatArray texMatArray);
+    void draw_frame(const jfloatArray texMatArray);
     const jintArray get_compatible_res(jint width, jint height) const;
     int32_t get_sensor_orientation();
-    jobject get_surface();
 };
 
 #endif
