@@ -1,6 +1,6 @@
 #include "opengl.h"
 #include "log.h"
-#include <GLES2/gl2.h>
+#include <GLES3/gl3.h>
 #include <GLES2/gl2ext.h>
 #include <vector>
 
@@ -9,10 +9,11 @@ GLint vertex_position, uvs, tex_sampler, tex_matrix;
 GLuint buffers[2];
 
 static int32_t width = 0, height = 0;
+static float aspect_ratio = 0.0;
 
 static const char* vertex_shader_src = R"(
     
-    attribute vec4 vertexPosition;
+    attribute vec3 vertexPosition;
     attribute vec2 uvs;
     uniform mat4 texMatrix;
     varying vec2 varUvs;
@@ -20,7 +21,7 @@ static const char* vertex_shader_src = R"(
     void main()
     {
         varUvs = (texMatrix * vec4(uvs.x, uvs.y, 0, 1.0)).xy;
-        gl_Position = vertexPosition;
+        gl_Position = vec4(vertexPosition, 1.0);
     }
 )";
 
@@ -79,10 +80,10 @@ GLuint create_program(GLuint vertex_shader, GLuint fragment_shader) {
     return prog;
 }
 
-void ogl::init_surface (int32_t w, int32_t h, int32_t tex_id) {
+void ogl::init_surface (int32_t w, int32_t h, int32_t aspect, int32_t tex_id) {
 
     texture_id = tex_id;
-    width = w; height = h;
+    width = aspect > 0 ? h: w; height = aspect > 0 ? w: h;
     vertex_shader = create_shader(vertex_shader_src, GL_VERTEX_SHADER);
     fragment_shader = create_shader(fragment_shader_src, GL_FRAGMENT_SHADER);
     program = create_program(vertex_shader, fragment_shader);
@@ -129,4 +130,9 @@ void ogl::draw_frame(const float texMat[]) {
     glViewport(0, 0, width, height);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[1]);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
+void ogl::destroy() {
+
+    glDeleteProgram(program);
 }

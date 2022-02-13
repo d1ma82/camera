@@ -5,6 +5,7 @@
 #include <media/NdkImage.h>
 
 static int32_t comp_width = 0, comp_height = 0;
+static int32_t aspect = 0;  // 1 - portrait; (-1) - landscape
 
 void OnCameraAvailable(void* ctx, const char* id) {}
 void OnCameraUnavailable(void* ctx, const char* id) {}
@@ -79,6 +80,8 @@ NDKCamera::~NDKCamera() {
     ACameraCaptureSession_close(session);
 
     requests.resize(0);
+
+    ogl::destroy();
 
     if (container) ACaptureSessionOutputContainer_free(container);
     container = nullptr;
@@ -178,6 +181,7 @@ void NDKCamera::calc_compatible_preview_size(int32_t width, int32_t height, int3
     ACameraMetadata_const_entry entry = {0};
     // format, width, height, input?
     CALL(ACameraMetadata_getConstEntry(metadata, ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry));
+    aspect = width < height ? 1: -1;
     int32_t window_square = width * height;
     int32_t min = 0;
     int32_t j = 0;
@@ -200,8 +204,8 @@ void NDKCamera::calc_compatible_preview_size(int32_t width, int32_t height, int3
             LOGI("AVAILABLE_STREAM_CONFIGURATIONS, %d x %d", entry.data.i32[i+1], entry.data.i32[i+2])
         }
     }    
-    comp_width  = width < height ? entry.data.i32[j+2]: entry.data.i32[j+1];
-    comp_height = width < height ? entry.data.i32[j+1]: entry.data.i32[j+2];
+    comp_width  = entry.data.i32[j+1];
+    comp_height = entry.data.i32[j+2];
     out_compatible_res[0] = comp_width;
     out_compatible_res[1] = comp_height;
     LOGI("Compatible resolution, %d x %d", comp_width, comp_height)
@@ -209,7 +213,7 @@ void NDKCamera::calc_compatible_preview_size(int32_t width, int32_t height, int3
 
 void NDKCamera::init_surface(int32_t texture_id) noexcept {
 
-    ogl::init_surface(comp_width, comp_height, texture_id);
+    ogl::init_surface(comp_width, comp_height, aspect, texture_id);
     LOGI("Open GL texture_id= %d", texture_id)
 }
 

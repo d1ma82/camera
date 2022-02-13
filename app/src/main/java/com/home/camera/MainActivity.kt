@@ -3,6 +3,8 @@ package com.home.camera
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
+import android.view.Window
+import android.view.WindowManager
 import com.home.camera.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -24,6 +26,7 @@ class MainActivity : AppCompatActivity() {
                         FLAGS_FULLSCREEN}, IMMERSIVE_FLAG_TIMEOUT)
     }
 
+
     companion object {
 
         /** Combination of all flags required to put activity into immersive mode */
@@ -36,6 +39,6 @@ class MainActivity : AppCompatActivity() {
         /** Milliseconds used for UI animations */
         const val ANIMATION_FAST_MILLIS = 50L
         const val ANIMATION_SLOW_MILLIS = 100L
-        private const val IMMERSIVE_FLAG_TIMEOUT = 500L
+        private const val IMMERSIVE_FLAG_TIMEOUT = 100L
     }
 }
