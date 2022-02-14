@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 #set(CMAKE_BUILD_TYPE "DEBUG")
 #set(OpenCV_DIR "D:/OpenCV/android_4_5_4/install/sdk/native/jni")
 cmake_path(CONVERT $ENV{ANDROID_NDK} TO_CMAKE_PATH_LIST ANDROID_NDK)
-#set(ANDROID_NDK "D:/AndroidNDK/android-ndk-r21e")
+cmake_path(CONVERT $ENV{GLM} TO_CMAKE_PATH_LIST GLM)
 set(ANDROID_ABI "arm64-v8a")
 #set(ANDROID_ABI "x86_64")
 set(ANDROID_PLATFORM "24")
@@ -20,6 +20,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 target_include_directories(${PROJECT_NAME} 
     PRIVATE "./include"
+    PRIVATE ${GLM}
   #  PRIVATE "${OpenCV_DIR}/include"
 )
 

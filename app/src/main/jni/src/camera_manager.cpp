@@ -4,8 +4,8 @@
 #include <memory>
 #include <media/NdkImage.h>
 
-static int32_t comp_width = 0, comp_height = 0;
-static int32_t aspect = 0;  // 1 - portrait; (-1) - landscape
+static int32_t screen_width = 0, screen_height = 0;
+static bool session_created = false, preview_started = false;
 
 void OnCameraAvailable(void* ctx, const char* id) {}
 void OnCameraUnavailable(void* ctx, const char* id) {}
@@ -131,6 +131,7 @@ void NDKCamera::select_camera(const char* facing) noexcept {
 
 void NDKCamera::create_session(ANativeWindow* window) noexcept {
 
+    if (session_created) return;
     ANativeWindow_acquire(window);
    // RequestInfo* info = new RequestInfo;
     requests[PREVIEW_IDX].req_template = TEMPLATE_PREVIEW;
@@ -162,26 +163,33 @@ void NDKCamera::create_session(ANativeWindow* window) noexcept {
     };
     CALL(ACaptureRequest_addTarget(requests[PREVIEW_IDX].request.get(), requests[PREVIEW_IDX].target.get()))
     CALL(ACameraDevice_createCaptureSession(device, container, &sessionStateCallbacks, &session))
+    session_created = true; 
     LOGI("Preview session created, %d", status)
 }
 
 void NDKCamera::start_preview(bool start) noexcept {
 
     if (start) {
+
+        if (preview_started) return;
         ACaptureRequest* request = requests[PREVIEW_IDX].request.get();
         CALL(ACameraCaptureSession_setRepeatingRequest(
-            session, &captureCallbacks, 1, &request, &requests[PREVIEW_IDX].session_sequence))
+            session, &captureCallbacks, 1, &request, &requests[PREVIEW_IDX].session_sequence))  
+        preview_started = true; 
     } else {
+        
         CALL(ACameraCaptureSession_stopRepeating(session))
+        preview_started = false;
     }
 }
 
 void NDKCamera::calc_compatible_preview_size(int32_t width, int32_t height, int32_t out_compatible_res[2]) noexcept {
 
+    screen_width = width; screen_height = height;
     ACameraMetadata_const_entry entry = {0};
     // format, width, height, input?
     CALL(ACameraMetadata_getConstEntry(metadata, ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry));
-    aspect = width < height ? 1: -1;
+ 
     int32_t window_square = width * height;
     int32_t min = 0;
     int32_t j = 0;
@@ -204,17 +212,14 @@ void NDKCamera::calc_compatible_preview_size(int32_t width, int32_t height, int3
             LOGI("AVAILABLE_STREAM_CONFIGURATIONS, %d x %d", entry.data.i32[i+1], entry.data.i32[i+2])
         }
     }    
-    comp_width  = entry.data.i32[j+1];
-    comp_height = entry.data.i32[j+2];
-    out_compatible_res[0] = comp_width;
-    out_compatible_res[1] = comp_height;
-    LOGI("Compatible resolution, %d x %d", comp_width, comp_height)
+    out_compatible_res[0] = entry.data.i32[j+1];
+    out_compatible_res[1] = entry.data.i32[j+2];
+    LOGI("Camera compatible resolution, %d x %d", out_compatible_res[0], out_compatible_res[1])
 }
 
 void NDKCamera::init_surface(int32_t texture_id) noexcept {
 
-    ogl::init_surface(comp_width, comp_height, aspect, texture_id);
-    LOGI("Open GL texture_id= %d", texture_id)
+    ogl::init_surface(screen_width, screen_height, texture_id);
 }
 
 void NDKCamera::draw_frame(const float texture_mat[]) {
