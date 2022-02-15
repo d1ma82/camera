@@ -39,6 +39,7 @@ class CameraFragmentGL:Fragment(), View.OnTouchListener {
     override fun onPause() {
         super.onPause()
         Log.d(logTag, "omPause")
+        surfaceView.isEnabled = false
     }
 
     override fun onTouch(p0: View?, event: MotionEvent?): Boolean {
@@ -60,4 +61,7 @@ class CameraFragmentGL:Fragment(), View.OnTouchListener {
             }
         }
     }
+    //TODO: Create button to made pictures
+    // save picture to gallery
+    // begin with neural net
 }

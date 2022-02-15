@@ -62,6 +62,8 @@ static ACameraCaptureSession_captureCallbacks captureCallbacks {
 
 NDKCamera::NDKCamera(const char* facing) {
 
+    screen_width = 0, screen_height = 0;
+    session_created = false, preview_started = false;
     manager = ACameraManager_create();
     CALL(ACameraManager_registerAvailabilityCallback(manager, &cameraMgrListener));
     CALL(ACameraManager_getCameraIdList(manager, &id_list));

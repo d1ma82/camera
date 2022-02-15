@@ -12,14 +12,14 @@ GLuint buffers[2];
 
 static int32_t width = 0, height = 0;
 
-enum ProgramType {NORMAL, BLUR, COUNT} ;
+enum Type {NORMAL, BLUR, COUNT} ;
 
 typedef struct {
-    ProgramType type;
+    Type type;
     GLuint id, vertex_shader, fragment_shader;
 } Program;
 
-std::vector<Program> programs(COUNT);
+std::vector<Program> programs;
 
 Program* current_program = nullptr;
 
@@ -27,18 +27,18 @@ static const char* vertex_shader_src = R"(
     
     attribute vec3 vertex_position;
     attribute vec2 st;
-    uniform mat4 tex_matrix;
+    uniform mat4 tex_matrix; // transform matrix for 90deg camera rotation
     varying vec2 var_st;
     
     void main()
     {
         var_st = (tex_matrix * vec4(st.x, st.y, 0, 1.0)).xy;
-       // var_st = st;
+        //var_st = st;
         gl_Position = vec4(vertex_position, 1.0);
     }
 )";
 
-static const char* fragment_shader_src = R"(
+static const char* fragment_normal_src = R"(
  
     #extension GL_OES_EGL_image_external : require
     precision mediump float;
@@ -54,8 +54,9 @@ static const char* fragment_shader_src = R"(
 )";
 
 // Blur Filter
-static const char fragment_shader_blur_src[] = R"(
+static const char fragment_blur_src[] = R"(
     
+    #extension GL_OES_EGL_image_external : require
     precision highp float; 
     uniform samplerExternalOES tex_sampler;
     varying vec2 var_st;
@@ -78,10 +79,10 @@ static const char fragment_shader_blur_src[] = R"(
 // using the OpenGL ES cull face feature
 static float vertices[] {
 //   x   y   z    s   t  
-    -1,  1, .0f,  0,  0,      // top left
-    -1, -1, .0f,  1,  0,      // bottom left  
-     1, -1, .0f,  1,  1,      // bottom right
-     1,  1, .0f,  0,  1       // top right  
+    -1,  1, .0f,  0,  1,      // top left
+    -1, -1, .0f,  0,  0,      // bottom left  
+     1, -1, .0f,  1,  0,      // bottom right
+     1,  1, .0f,  1,  1       // top right  
 };
 
 static GLuint indices[] { 0, 1, 2, 0, 2, 3 };
@@ -137,17 +138,18 @@ void ogl::next_shader() {
 
 void ogl::init_surface (int32_t w, int32_t h, int32_t tex_id) {
 
-    if (texture_id == tex_id) return;
+    if (texture_id == tex_id) return; // on android side onSurfaceChanged may call couple times
 
     texture_id = tex_id; width = w; height = h;
+    programs.resize(COUNT);
 
     int i = 0;
     for (auto &el : programs) {
 
-        el.type = ProgramType(i);
+        el.type = Type(i);
         el.vertex_shader = create_shader(vertex_shader_src, GL_VERTEX_SHADER);
-        if (i == NORMAL) el.fragment_shader = create_shader(fragment_shader_src, GL_FRAGMENT_SHADER);
-   else if (i == BLUR) el.fragment_shader = create_shader(fragment_shader_blur_src, GL_FRAGMENT_SHADER); 
+        if (i == BLUR) el.fragment_shader = create_shader(fragment_blur_src, GL_FRAGMENT_SHADER); 
+        else el.fragment_shader = create_shader(fragment_normal_src, GL_FRAGMENT_SHADER);
         el.id =  create_program(el.vertex_shader, el.fragment_shader);
         i++;
     }
@@ -205,4 +207,7 @@ void ogl::destroy() {
     for (auto &el: programs) delete_program(el);
 
     glDeleteBuffers(2, buffers);
+    programs.resize(0);
+    current_program = nullptr;
+    texture_id = 0;
 }
