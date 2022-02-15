@@ -3,13 +3,15 @@ package com.home.camera
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
-import android.view.Window
-import android.view.WindowManager
+import androidx.core.view.GestureDetectorCompat
 import com.home.camera.databinding.ActivityMainBinding
+
+private const val logTag = "MainActivity"
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var mDetector: GestureDetectorCompat
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,7 +27,6 @@ class MainActivity : AppCompatActivity() {
             binding.fragmentContainer.systemUiVisibility =
                         FLAGS_FULLSCREEN}, IMMERSIVE_FLAG_TIMEOUT)
     }
-
 
     companion object {
 

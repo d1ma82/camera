@@ -19,6 +19,7 @@ public:
 
     void create_session(jobject surface);
     void init_surface(int32_t texture_id);
+    void next_shader();
     void start_preview(bool start);
     void draw_frame(const jfloatArray texMatArray);
     const jintArray get_compatible_res(jint width, jint height) const;

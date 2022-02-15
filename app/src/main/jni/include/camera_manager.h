@@ -51,6 +51,7 @@ public:
     void start_preview(bool start) noexcept;
     void calc_compatible_preview_size(int32_t width, int32_t height, int32_t out_compatible_res[2]) noexcept;
     void init_surface(int32_t texture_id) noexcept;
+    void next_shader() noexcept;
     void draw_frame(const float texture_mat[]);
 };
 

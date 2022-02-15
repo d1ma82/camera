@@ -6,23 +6,34 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-GLuint texture_id = 0, vertex_shader, fragment_shader, program;
+GLuint texture_id = 0;
 GLint vertex_position, st, tex_sampler, tex_matrix;
 GLuint buffers[2];
 
 static int32_t width = 0, height = 0;
 
+enum ProgramType {NORMAL, BLUR, COUNT} ;
+
+typedef struct {
+    ProgramType type;
+    GLuint id, vertex_shader, fragment_shader;
+} Program;
+
+std::vector<Program> programs(COUNT);
+
+Program* current_program = nullptr;
+
 static const char* vertex_shader_src = R"(
     
     attribute vec3 vertex_position;
     attribute vec2 st;
-    uniform mat4 texMatrix;
+    uniform mat4 tex_matrix;
     varying vec2 var_st;
     
     void main()
     {
-       // varUvs = (texMatrix * vec4(uv.x, uv.y, 0, 1.0)).xy;
-        var_st = st;
+        var_st = (tex_matrix * vec4(st.x, st.y, 0, 1.0)).xy;
+       // var_st = st;
         gl_Position = vec4(vertex_position, 1.0);
     }
 )";
@@ -32,14 +43,33 @@ static const char* fragment_shader_src = R"(
     #extension GL_OES_EGL_image_external : require
     precision mediump float;
     
-    uniform samplerExternalOES texSampler;
+    uniform samplerExternalOES tex_sampler;
     varying vec2 var_st;
     
     void main()
     {
-        gl_FragColor = texture2D(texSampler, var_st);
+        gl_FragColor = texture2D(tex_sampler, var_st);
        //gl_FragColor = vec4(1, 0, 0, 1);  // red
     }    
+)";
+
+// Blur Filter
+static const char fragment_shader_blur_src[] = R"(
+    
+    precision highp float; 
+    uniform samplerExternalOES tex_sampler;
+    varying vec2 var_st;
+ 
+    void main() {
+        vec4 sample0, sample1, sample2, sample3;
+        float blurStep = 0.5;
+        float step = blurStep / 100.0;
+        sample0 = texture2D(tex_sampler, var_st - step);
+        sample1 = texture2D(tex_sampler, var_st + step);
+        sample2 = texture2D(tex_sampler, vec2(var_st.x + step, var_st.y - step));
+        sample3 = texture2D(tex_sampler, vec2(var_st.x - step, var_st.y + step));
+        gl_FragColor = (sample0 + sample1 + sample2 + sample3) / 4.0;
+    }
 )";
 
 // Note that the coordinates of this shape are defined in a counterclockwise order. 
@@ -48,26 +78,26 @@ static const char* fragment_shader_src = R"(
 // using the OpenGL ES cull face feature
 static float vertices[] {
 //   x   y   z    s   t  
-    -1,  1, .0f,  0,  1,      // top left
-    -1, -1, .0f,  0,  0,      // bottom left  
-     1, -1, .0f,  1,  0,      // bottom right
-     1,  1, .0f,  1,  1       // top right  
+    -1,  1, .0f,  0,  0,      // top left
+    -1, -1, .0f,  1,  0,      // bottom left  
+     1, -1, .0f,  1,  1,      // bottom right
+     1,  1, .0f,  0,  1       // top right  
 };
 
 static GLuint indices[] { 0, 1, 2, 0, 2, 3 };
 
 
-GLuint create_shader(const char* src, GLenum type) {
+GLuint create_shader (const char* src, GLenum type) {
 
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &src, NULL);
-    glCompileShader(shader);
+    GLuint shader = glCreateShader (type);
+    glShaderSource (shader, 1, &src, NULL);
+    glCompileShader (shader);
     GLint is_compiled=0;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &is_compiled);
+    glGetShaderiv (shader, GL_COMPILE_STATUS, &is_compiled);
     if (is_compiled == GL_FALSE) {
 
         GLint length=0;
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+        glGetShaderiv (shader, GL_INFO_LOG_LENGTH, &length);
         std::vector<GLchar> log(length);
         glGetShaderInfoLog(shader, length, &length, log.data());
         LOGI("Could not compile shader %s - %s", src, log.data());
@@ -75,7 +105,16 @@ GLuint create_shader(const char* src, GLenum type) {
     return shader;
 }
 
-GLuint create_program(GLuint vertex_shader, GLuint fragment_shader) {
+void delete_program (Program& program) {
+
+    glDetachShader(program.id, program.vertex_shader);
+    glDetachShader(program.id, program.fragment_shader);
+    glDeleteShader(program.vertex_shader);
+    glDeleteShader(program.fragment_shader);
+    glDeleteProgram(program.id);
+}
+
+GLuint create_program (GLuint vertex_shader, GLuint fragment_shader) {
 
     GLuint prog = glCreateProgram();
     glAttachShader(prog, vertex_shader);
@@ -87,20 +126,36 @@ GLuint create_program(GLuint vertex_shader, GLuint fragment_shader) {
     return prog;
 }
 
+void ogl::next_shader() {
+
+    switch (current_program->type) {
+        default: 
+        case NORMAL: current_program = &programs[BLUR]; break;
+        case BLUR:   current_program = &programs[NORMAL]; break;
+    }
+}
+
 void ogl::init_surface (int32_t w, int32_t h, int32_t tex_id) {
 
     if (texture_id == tex_id) return;
 
     texture_id = tex_id; width = w; height = h;
-    LOGI("Screen size %d x %d; texture_id = %d", width, height, texture_id)
-    vertex_shader = create_shader(vertex_shader_src, GL_VERTEX_SHADER);
-    fragment_shader = create_shader(fragment_shader_src, GL_FRAGMENT_SHADER);
-    program = create_program(vertex_shader, fragment_shader);
 
-    vertex_position = glGetAttribLocation(program, "vertex_position");
-    st =              glGetAttribLocation(program, "st");
-    tex_sampler =     glGetUniformLocation(program, "texSampler");
-    tex_matrix =      glGetUniformLocation(program, "texMatrix");
+    int i = 0;
+    for (auto &el : programs) {
+
+        el.type = ProgramType(i);
+        el.vertex_shader = create_shader(vertex_shader_src, GL_VERTEX_SHADER);
+        if (i == NORMAL) el.fragment_shader = create_shader(fragment_shader_src, GL_FRAGMENT_SHADER);
+   else if (i == BLUR) el.fragment_shader = create_shader(fragment_shader_blur_src, GL_FRAGMENT_SHADER); 
+        el.id =  create_program(el.vertex_shader, el.fragment_shader);
+        i++;
+    }
+    current_program = &programs[NORMAL];
+    vertex_position = glGetAttribLocation(current_program->id, "vertex_position");
+    st =              glGetAttribLocation(current_program->id, "st");
+    tex_sampler =     glGetUniformLocation(current_program->id, "tex_sampler");
+    tex_matrix =      glGetUniformLocation(current_program->id, "tex_matrix");
 
     glGenBuffers(2, buffers);
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
@@ -108,6 +163,8 @@ void ogl::init_surface (int32_t w, int32_t h, int32_t tex_id) {
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
+
+    LOGI("Init surface %d x %d; texture_id = %d", width, height, texture_id)
 }
 
 void ogl::draw_frame(const float texMat[]) {
@@ -115,16 +172,7 @@ void ogl::draw_frame(const float texMat[]) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glClearColor(0,0,0,1);
 
-    glUseProgram(program);
-
-  /*  float ratio = float(width) / float(height);
-    // create a projection matrix from device screen geometry
-    glm::mat4x4 proj = glm::ortho(-ratio, ratio, -ratio, ratio, 3.0f, 7.0f);
-    glm::vec3 eye       {0, 0, 3.0f};
-    glm::vec3 center    {0, 0, 0};
-    glm::vec3 up        {0, 1.0f, 0};
-    glm::mat4x4 view = glm::lookAt(eye, center, up); // camera view
-    glm::mat4x4 mvp_data  = proj * view;*/
+    glUseProgram(current_program->id);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_EXTERNAL_OES, texture_id);
@@ -134,7 +182,7 @@ void ogl::draw_frame(const float texMat[]) {
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glUniform1i(tex_sampler, 0);
 
-   // glUniformMatrix4fv(tex_matrix, 1, false, texMat);
+    glUniformMatrix4fv(tex_matrix, 1, false, texMat);
   
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
     glEnableVertexAttribArray(vertex_position);
@@ -152,6 +200,9 @@ void ogl::draw_frame(const float texMat[]) {
 
 void ogl::destroy() {
 
-    glDeleteProgram(program);
+    glUseProgram(0);
+
+    for (auto &el: programs) delete_program(el);
+
     glDeleteBuffers(2, buffers);
 }

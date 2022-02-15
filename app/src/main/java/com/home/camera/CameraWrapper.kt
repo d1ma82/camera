@@ -13,6 +13,7 @@ class CameraWrapper {
     external fun onPreviewSurfaceCreated(camera: Long, surface: Surface, texture_id: Int = 0)
     external fun onPreviewSurfaceDestroyed(camera: Long, surface: Surface?)
     external fun onDrawFrame(camera: Long, tex_mat: FloatArray)
+    external fun nextShader(camera: Long)
 
     init {
         val greet = greeting("Kotlin")

@@ -226,3 +226,7 @@ void NDKCamera::draw_frame(const float texture_mat[]) {
 
     ogl::draw_frame(texture_mat);
 }
+
+void NDKCamera::next_shader() noexcept {
+    ogl::next_shader();
+}

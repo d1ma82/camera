@@ -29,6 +29,11 @@ class CamRenderer(private val view: GLSurfaceView):
         cameraHandle = 0
     }
 
+    fun applyNextShader() {
+        Log.d(logTag, "applyNextShader")
+        cameraWrapper.nextShader(cameraHandle)
+    }
+
     override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
         Log.d(logTag, "onSurfaceCreated")
 
@@ -50,13 +55,13 @@ class CamRenderer(private val view: GLSurfaceView):
 
     override fun onDrawFrame(p0: GL10?) {
 
-        Log.d(logTag, "onDrawFrame")
+       // Log.d(logTag, "onDrawFrame")
         cameraWrapper.onDrawFrame(cameraHandle, texMatrix)
     }
 
     override fun onFrameAvailable(p0: SurfaceTexture?) {
 
-        Log.d(logTag, "onFrameAvailable")
+       // Log.d(logTag, "onFrameAvailable")
 
         view.queueEvent{
 

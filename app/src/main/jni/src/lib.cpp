@@ -95,7 +95,7 @@ extern "C" JNIEXPORT jintArray JNICALL Java_com_home_camera_CameraWrapper_compat
 
         // With Open GL surface
 
-extern "C" JNIEXPORT void Java_com_home_camera_CameraWrapper_onDrawFrame(
+extern "C" JNIEXPORT void JNICALL Java_com_home_camera_CameraWrapper_onDrawFrame(
     JNIEnv* env, 
     jobject instance,
     jlong cam_obj,
@@ -104,5 +104,15 @@ extern "C" JNIEXPORT void Java_com_home_camera_CameraWrapper_onDrawFrame(
     ASSERT(cam_obj && (jlong)engine == cam_obj, "NativeObject should not be null Pointer")
     CameraEngine* app = reinterpret_cast<CameraEngine*>(cam_obj);
     app->draw_frame(texMatArray);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_home_camera_CameraWrapper_nextShader(
+    JNIEnv* env, 
+    jobject instance,
+    jlong cam_obj
+) {
+    ASSERT(cam_obj && (jlong)engine == cam_obj, "NativeObject should not be null Pointer")
+    CameraEngine* app = reinterpret_cast<CameraEngine*>(cam_obj);
+    app->next_shader();
 }
 

@@ -33,6 +33,10 @@ void CameraEngine::init_surface(int32_t texture_id) {
     camera->init_surface(texture_id);
 }
 
+void CameraEngine::next_shader() {
+    camera->next_shader();
+}
+
 void CameraEngine::start_preview(bool start){
 
     camera->start_preview(start);
