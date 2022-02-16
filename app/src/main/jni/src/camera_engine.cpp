@@ -37,6 +37,10 @@ void CameraEngine::next_shader() {
     camera->next_shader();
 }
 
+void CameraEngine::take_photo() {
+    camera->take_photo();
+}
+
 void CameraEngine::start_preview(bool start){
 
     camera->start_preview(start);

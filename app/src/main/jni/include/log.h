@@ -3,7 +3,7 @@
 
 #include <android/log.h>
 
-#define DEBUG
+//#define DEBUG
 
 #define LOGI(...) (__android_log_print(ANDROID_LOG_INFO, "LOGI: " __FILE__, __VA_ARGS__));
 

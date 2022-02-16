@@ -21,6 +21,7 @@ public:
     void init_surface(int32_t texture_id);
     void next_shader();
     void start_preview(bool start);
+    void take_photo();
     void draw_frame(const jfloatArray texMatArray);
     const jintArray get_compatible_res(jint width, jint height) const;
     int32_t get_sensor_orientation();

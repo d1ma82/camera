@@ -1,10 +1,9 @@
 #include "log.h"
 #include "camera_manager.h"
 #include "opengl.h"
-#include <memory>
-#include <media/NdkImage.h>
 
 static int32_t screen_width = 0, screen_height = 0;
+static int32_t still_cap_width = 0, still_cap_height = 0;
 static bool session_created = false, preview_started = false;
 
 void OnCameraAvailable(void* ctx, const char* id) {}
@@ -43,7 +42,9 @@ static ACameraCaptureSession_stateCallbacks sessionStateCallbacks {
 void onCaptureFailed(void* context, ACameraCaptureSession* session, ACaptureRequest* request, ACameraCaptureFailure* failure) {
     LOGI("onCaptureFailed %d", failure->reason)
 }
-void onCaptureSequenceCompleted(void* context, ACameraCaptureSession* session, int sequenceId, int64_t frameNumber){}
+void onCaptureSequenceCompleted(void* context, ACameraCaptureSession* session, int sequenceId, int64_t frameNumber){
+    //resume preview
+}
 void onCaptureSequenceAborted(void* context, ACameraCaptureSession* session, int sequenceId){}
 void onCaptureCompleted (
         void* context, ACameraCaptureSession* session,
@@ -60,9 +61,58 @@ static ACameraCaptureSession_captureCallbacks captureCallbacks {
         captureCallbacks.onCaptureBufferLost = nullptr,
 };
 
+void write_file(AImage* image) {
+
+    int32_t w, h;
+    AImage_getWidth(image, &w);
+    AImage_getHeight(image, &h);
+
+    struct timespec ts {
+        0, 0
+    };
+    clock_gettime(CLOCK_REALTIME, &ts);
+    struct tm localTime;
+    localtime_r(&ts.tv_sec, &localTime);
+
+    std::string fileName = "";
+    std::string dash("-");
+    fileName += std::to_string(localTime.tm_mon) +
+                std::to_string(localTime.tm_mday) + dash +
+                std::to_string(localTime.tm_hour) +
+                std::to_string(localTime.tm_min) +
+                std::to_string(localTime.tm_sec) + ".jpg";
+
+    LOGI("Got an image %s %d x %d", fileName.c_str(), w, h)
+    AImage_delete(image);
+}
+
+void imageCallback(void* preview_window, AImageReader* reader){
+
+    LOGI("Get JPEG Image")
+    int32_t format;
+    media_status_t status = AImageReader_getFormat(reader, &format);
+    ASSERT(status == AMEDIA_OK, "Failed to get format")
+
+    if (format == AIMAGE_FORMAT_JPEG) {
+
+        AImage* image = nullptr;
+        status = AImageReader_acquireNextImage(reader, &image);
+        ASSERT(status == AMEDIA_OK, "Image not available")
+
+        std::thread write_file_handler(write_file, image);
+        write_file_handler.detach();
+    }
+}   
+
+static AImageReader_ImageListener jpg_listener {
+            jpg_listener.context = nullptr,
+            jpg_listener.onImageAvailable = imageCallback,
+};
+
 NDKCamera::NDKCamera(const char* facing) {
 
     screen_width = 0, screen_height = 0;
+    still_cap_width = 0, still_cap_height = 0;
     session_created = false, preview_started = false;
     manager = ACameraManager_create();
     CALL(ACameraManager_registerAvailabilityCallback(manager, &cameraMgrListener));
@@ -72,6 +122,7 @@ NDKCamera::NDKCamera(const char* facing) {
     memset(requests.data(), 0, requests.size() * sizeof(RequestInfo));
     LOGI("Camera count: %d", id_list->numCameras)
     select_camera(facing);
+    still_capture_size();
 }
 
 NDKCamera::~NDKCamera() {
@@ -134,39 +185,68 @@ void NDKCamera::select_camera(const char* facing) noexcept {
 void NDKCamera::create_session(ANativeWindow* window) noexcept {
 
     if (session_created) return;
-    ANativeWindow_acquire(window);
-   // RequestInfo* info = new RequestInfo;
+
+    ANativeWindow* jpg_window;
+
+    reader = image_reader { [&jpg_window, this]() {
+
+            AImageReader* reader {};
+            jpg_listener.context = this;
+            AImageReader_new(still_cap_width, still_cap_height, AIMAGE_FORMAT_JPEG, 1, &reader);
+            AImageReader_setImageListener(reader, &jpg_listener);
+            AImageReader_getWindow(reader, &jpg_window);
+            return reader;
+        }(), AImageReader_delete
+    };
+    
     requests[PREVIEW_IDX].req_template = TEMPLATE_PREVIEW;
-    requests[PREVIEW_IDX].window = native_window{window, ANativeWindow_release};
+    requests[PREVIEW_IDX].window = {window, ANativeWindow_release};
+    requests[PHOTO_IDX].req_template = TEMPLATE_STILL_CAPTURE;
+    requests[PHOTO_IDX].window = {jpg_window, ANativeWindow_release};
 
-    requests[PREVIEW_IDX].output = session_output {
-        [window, this] () {
-                ACaptureSessionOutput* output {};
-                CALL(ACaptureSessionOutput_create(window, &output))
-                return output;
-        }(), ACaptureSessionOutput_free
-    };
-    ACaptureSessionOutputContainer_add(container, requests[PREVIEW_IDX].output.get());
+    for (auto &req: requests) {
 
-    requests[PREVIEW_IDX].target = output_target {
-        [window, this] () {
-                ACameraOutputTarget* target {};
-                CALL(ACameraOutputTarget_create(window, &target))
-                return target;
-        }(), ACameraOutputTarget_free
-    };
+        ANativeWindow_acquire(req.window.get());
 
-    requests[PREVIEW_IDX].request = capture_request {
-        [this] (ACameraDevice_request_template request_template) {
-            ACaptureRequest* request {};
-            CALL(ACameraDevice_createCaptureRequest(device, request_template, &request))
-            return request;
-        } (requests[PREVIEW_IDX].req_template), ACaptureRequest_free
-    };
-    CALL(ACaptureRequest_addTarget(requests[PREVIEW_IDX].request.get(), requests[PREVIEW_IDX].target.get()))
+        req.output = session_output {  [&req, this] () {
+
+                    ACaptureSessionOutput* output {};
+                    CALL(ACaptureSessionOutput_create(req.window.get(), &output))
+                    return output;
+            }(), ACaptureSessionOutput_free
+        };
+        CALL(ACaptureSessionOutputContainer_add(container, req.output.get()));
+
+        req.target = output_target { [&req, this] () {
+
+                    ACameraOutputTarget* target {};
+                    CALL(ACameraOutputTarget_create(req.window.get(), &target))
+                    return target;
+            }(), ACameraOutputTarget_free
+        };
+
+        req.request = capture_request { [this] (ACameraDevice_request_template request_template) {
+
+                ACaptureRequest* request {};
+                CALL(ACameraDevice_createCaptureRequest(device, request_template, &request))
+                return request;
+            } (req.req_template), ACaptureRequest_free
+        };
+        CALL(ACaptureRequest_addTarget(req.request.get(), req.target.get()))
+    }
+    
     CALL(ACameraDevice_createCaptureSession(device, container, &sessionStateCallbacks, &session))
     session_created = true; 
     LOGI("Preview session created, %d", status)
+}
+
+void NDKCamera::take_photo() noexcept {
+
+    if (preview_started) {
+        ACaptureRequest* request = requests[PHOTO_IDX].request.get();
+        CALL(ACameraCaptureSession_capture(
+            session, &captureCallbacks, 1, &request, &requests[PHOTO_IDX].sequence))
+    }
 }
 
 void NDKCamera::start_preview(bool start) noexcept {
@@ -175,8 +255,7 @@ void NDKCamera::start_preview(bool start) noexcept {
 
         if (preview_started) return;
         ACaptureRequest* request = requests[PREVIEW_IDX].request.get();
-        CALL(ACameraCaptureSession_setRepeatingRequest(
-            session, &captureCallbacks, 1, &request, &requests[PREVIEW_IDX].session_sequence))  
+        CALL(ACameraCaptureSession_setRepeatingRequest(session, nullptr, 1, &request, nullptr))  
         preview_started = true; 
     } else {
         
@@ -185,38 +264,54 @@ void NDKCamera::start_preview(bool start) noexcept {
     }
 }
 
-void NDKCamera::calc_compatible_preview_size(int32_t width, int32_t height, int32_t out_compatible_res[2]) noexcept {
+void NDKCamera::still_capture_size() {
 
-    screen_width = width; screen_height = height;
+    avalabale_stream_conf(AIMAGE_FORMAT_JPEG, [] (int32_t width, int32_t height) {
+
+            still_cap_width = std::max(still_cap_width, width);
+            still_cap_height = std::max(still_cap_height, height);
+    });
+    LOGI("Still capture size, %d x %d", still_cap_width, still_cap_height)
+}
+
+void NDKCamera::avalabale_stream_conf(AIMAGE_FORMATS format, 
+        std::function<void(int32_t width, int32_t height)> callback) {
+
     ACameraMetadata_const_entry entry = {0};
     // format, width, height, input?
     CALL(ACameraMetadata_getConstEntry(metadata, ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry));
- 
-    int32_t window_square = width * height;
-    int32_t min = 0;
-    int32_t j = 0;
 
     for (int i=0; i<entry.count; i+=4) {
 
         int32_t input = entry.data.i32[i+3];
         if (input) continue;  // intresting output
         
-        int32_t format = entry.data.i32[i+0];
-        if (format == AIMAGE_FORMAT_YUV_420_888) {
+        if (entry.data.i32[i+0] == format) {
 
-            int32_t diff = entry.data.i32[i+1] * entry.data.i32[i+2] - window_square;
-            if (min == 0) {min = diff; j = i;}
-            else if ((diff > 0) && (diff < min)) {
+            callback(entry.data.i32[i+1], entry.data.i32[i+2]);
+            LOGI("AVALABLE CONFIGURATION, %d x %d", entry.data.i32[i+1], entry.data.i32[i+2])
+        }
+    }     
+}
+    // Looking for compatible resolution with minimum differenc in greater side
+void NDKCamera::calc_compatible_preview_size(int32_t width, int32_t height, int32_t out_compatible_res[2]) noexcept {
+
+    screen_width = width; screen_height = height;
+    int32_t window_square = width * height;
+    int32_t min = 0;
+
+    avalabale_stream_conf(AIMAGE_FORMAT_YUV_420_888, 
+        [window_square, &min, out_compatible_res] (int32_t w, int32_t h) {
+
+            int32_t diff = w * h - window_square;
+            if ((min == 0) || ((diff > 0) && (diff < min))) {
 
                   min = diff;
-                  j = i;
+                  out_compatible_res[0] = w;
+                  out_compatible_res[1] = h;
             }
-            LOGI("AVAILABLE_STREAM_CONFIGURATIONS, %d x %d", entry.data.i32[i+1], entry.data.i32[i+2])
-        }
-    }    
-    out_compatible_res[0] = entry.data.i32[j+1];
-    out_compatible_res[1] = entry.data.i32[j+2];
-    LOGI("Camera compatible resolution, %d x %d", out_compatible_res[0], out_compatible_res[1])
+    });
+    LOGI("Compatible preview size, %d x %d", out_compatible_res[0], out_compatible_res[1])
 }
 
 void NDKCamera::init_surface(int32_t texture_id) noexcept {
@@ -224,7 +319,7 @@ void NDKCamera::init_surface(int32_t texture_id) noexcept {
     ogl::init_surface(screen_width, screen_height, texture_id);
 }
 
-void NDKCamera::draw_frame(const float texture_mat[]) {
+void NDKCamera::draw_frame(const float texture_mat[]) noexcept {
 
     ogl::draw_frame(texture_mat);
 }

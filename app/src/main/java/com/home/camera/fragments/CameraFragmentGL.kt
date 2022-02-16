@@ -7,11 +7,13 @@ import android.util.Log
 import android.view.*
 import androidx.fragment.app.Fragment
 import com.home.camera.CamRenderer
+import com.home.camera.databinding.FragmentCameraGlBinding
 
 private const val logTag = "CameraFragmentGL"
 
 class CameraFragmentGL:Fragment(), View.OnTouchListener {
 
+    private lateinit var  binding: FragmentCameraGlBinding
     private lateinit var surfaceView: GLSurfaceView
     private lateinit var camRenderer: CamRenderer
 
@@ -21,13 +23,14 @@ class CameraFragmentGL:Fragment(), View.OnTouchListener {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        surfaceView = GLSurfaceView(requireContext())
+        binding = FragmentCameraGlBinding.inflate(inflater,container, false)
+        surfaceView = binding.surfaceView
         surfaceView.setEGLContextClientVersion(3)
         camRenderer = CamRenderer(surfaceView)
         surfaceView.setRenderer(camRenderer)
         surfaceView.setOnTouchListener(this)
         surfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
-        return surfaceView
+        return binding.root
     }
 
     override fun onDestroy() {
@@ -61,7 +64,6 @@ class CameraFragmentGL:Fragment(), View.OnTouchListener {
             }
         }
     }
-    //TODO: Create button to made pictures
-    // save picture to gallery
-    // begin with neural net
+    //TODO: Link button with lib
+    // begin with net
 }

@@ -116,3 +116,13 @@ extern "C" JNIEXPORT void JNICALL Java_com_home_camera_CameraWrapper_nextShader(
     app->next_shader();
 }
 
+extern "C" JNIEXPORT void JNICALL Java_com_home_camera_CameraWrapper_takePhoto(
+    JNIEnv* env, 
+    jobject instance,
+    jlong cam_obj
+) {
+    ASSERT(cam_obj && (jlong)engine == cam_obj, "NativeObject should not be null Pointer")
+    CameraEngine* app = reinterpret_cast<CameraEngine*>(cam_obj);
+    app->take_photo();
+}
+

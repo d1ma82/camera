@@ -3,6 +3,9 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/git/kotlin/camera/app/src/main/res/drawable/ic_launcher_background.xml" value="0.2625" />
+        <entry key="..\:/git/kotlin/camera/app/src/main/res/drawable/ic_my_icon.xml" value="0.1055" />
+        <entry key="..\:/git/kotlin/camera/app/src/main/res/drawable/photo.xml" value="0.2625" />
         <entry key="..\:/git/kotlin/camera/app/src/main/res/layout/activity_main.xml" value="0.16944444444444445" />
         <entry key="..\:/git/kotlin/camera/app/src/main/res/layout/fragment_camera.xml" value="0.10009057971014493" />
         <entry key="..\:/git/kotlin/camera/app/src/main/res/layout/fragment_camera_gl.xml" value="0.36666666666666664" />
