@@ -1,10 +1,16 @@
 #include "log.h"
 #include "camera_manager.h"
 #include "opengl.h"
+#include <dirent.h>
+#include <thread>
+#include <memory>
+#include <string>
 
 static int32_t screen_width = 0, screen_height = 0;
+static int32_t img_width = 0, img_height = 0;
 static int32_t still_cap_width = 0, still_cap_height = 0;
 static bool session_created = false, preview_started = false;
+static const char* dcim = nullptr;
 
 void OnCameraAvailable(void* ctx, const char* id) {}
 void OnCameraUnavailable(void* ctx, const char* id) {}
@@ -67,28 +73,37 @@ void write_file(AImage* image) {
     AImage_getWidth(image, &w);
     AImage_getHeight(image, &h);
 
-    struct timespec ts {
-        0, 0
-    };
+    int len = 0;
+    uint8_t* data = nullptr;
+    AImage_getPlaneData(image, 0, &data, &len);
+    DIR *dir = opendir(dcim);
+    if (dir) closedir(dir); else { LOGI("Invalid dcim path: %s", dcim) return; }
+
+    struct timespec ts { 0, 0 };
     clock_gettime(CLOCK_REALTIME, &ts);
     struct tm localTime;
     localtime_r(&ts.tv_sec, &localTime);
 
-    std::string fileName = "";
+    std::string file_name = dcim + std::string("/IMG_");
     std::string dash("-");
-    fileName += std::to_string(localTime.tm_mon) +
+    file_name += std::to_string(localTime.tm_mon) +
                 std::to_string(localTime.tm_mday) + dash +
                 std::to_string(localTime.tm_hour) +
                 std::to_string(localTime.tm_min) +
                 std::to_string(localTime.tm_sec) + ".jpg";
 
-    LOGI("Got an image %s %d x %d", fileName.c_str(), w, h)
+    FILE *file = fopen(file_name.c_str(), "wb");
+    if (file && data && len) {
+
+        fwrite(data, 1, len, file);
+        fclose(file);
+    }
+    LOGI("Got an image %s %d x %d", file_name.c_str(), w, h)
     AImage_delete(image);
 }
 
 void imageCallback(void* preview_window, AImageReader* reader){
 
-    LOGI("Get JPEG Image")
     int32_t format;
     media_status_t status = AImageReader_getFormat(reader, &format);
     ASSERT(status == AMEDIA_OK, "Failed to get format")
@@ -112,8 +127,10 @@ static AImageReader_ImageListener jpg_listener {
 NDKCamera::NDKCamera(const char* facing) {
 
     screen_width = 0, screen_height = 0;
+    img_width = 0, img_height = 0;
     still_cap_width = 0, still_cap_height = 0;
     session_created = false, preview_started = false;
+    dcim = nullptr;
     manager = ACameraManager_create();
     CALL(ACameraManager_registerAvailabilityCallback(manager, &cameraMgrListener));
     CALL(ACameraManager_getCameraIdList(manager, &id_list));
@@ -240,9 +257,11 @@ void NDKCamera::create_session(ANativeWindow* window) noexcept {
     LOGI("Preview session created, %d", status)
 }
 
-void NDKCamera::take_photo() noexcept {
+void NDKCamera::take_photo(const char* path) noexcept {
 
     if (preview_started) {
+
+        dcim = path;
         ACaptureRequest* request = requests[PHOTO_IDX].request.get();
         CALL(ACameraCaptureSession_capture(
             session, &captureCallbacks, 1, &request, &requests[PHOTO_IDX].sequence))
@@ -316,7 +335,7 @@ void NDKCamera::calc_compatible_preview_size(int32_t width, int32_t height, int3
 
 void NDKCamera::init_surface(int32_t texture_id) noexcept {
 
-    ogl::init_surface(screen_width, screen_height, texture_id);
+    ogl::init_surface(screen_width, screen_height, img_width, img_height, texture_id);
 }
 
 void NDKCamera::draw_frame(const float texture_mat[]) noexcept {

@@ -3,14 +3,15 @@
 #include <GLES3/gl3.h>
 #include <GLES2/gl2ext.h>
 #include <vector>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+//#include <glm/glm.hpp>
+//#include <glm/gtc/matrix_transform.hpp>
 
 GLuint texture_id = 0;
 GLint vertex_position, st, tex_sampler, tex_matrix;
 GLuint buffers[2];
 
-static int32_t width = 0, height = 0;
+static int32_t screen_width = 0, screen_height = 0;
+static int32_t img_width = 0, img_height = 0;
 
 enum Type {NORMAL, BLUR, COUNT} ;
 
@@ -27,13 +28,14 @@ static const char* vertex_shader_src = R"(
     
     attribute vec3 vertex_position;
     attribute vec2 st;
-    uniform mat4 tex_matrix; // transform matrix for 90deg camera rotation
     varying vec2 var_st;
+    uniform mat4 tex_matrix; // transform matrix for 90deg camera rotation
     
     void main()
     {
         var_st = (tex_matrix * vec4(st.x, st.y, 0, 1.0)).xy;
         //var_st = st;
+
         gl_Position = vec4(vertex_position, 1.0);
     }
 )";
@@ -88,6 +90,7 @@ static float vertices[] {
 static GLuint indices[] { 0, 1, 2, 0, 2, 3 };
 
 
+
 GLuint create_shader (const char* src, GLenum type) {
 
     GLuint shader = glCreateShader (type);
@@ -136,11 +139,13 @@ void ogl::next_shader() {
     }
 }
 
-void ogl::init_surface (int32_t w, int32_t h, int32_t tex_id) {
+void ogl::init_surface (int32_t sw, int32_t sh, int32_t iw, int32_t ih, int32_t tex_id) {
 
     if (texture_id == tex_id) return; // on android side onSurfaceChanged may call couple times
 
-    texture_id = tex_id; width = w; height = h;
+    texture_id = tex_id; screen_width = sw; screen_height = sh;
+    img_width = iw; img_height = ih;
+
     programs.resize(COUNT);
 
     int i = 0;
@@ -166,7 +171,27 @@ void ogl::init_surface (int32_t w, int32_t h, int32_t tex_id) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
 
-    LOGI("Init surface %d x %d; texture_id = %d", width, height, texture_id)
+    LOGI("Init surface %d x %d; texture_id = %d", screen_width, screen_height, texture_id)
+}
+
+float aspect_ratio_correction(bool fillScreen,
+                              size_t backingWidth,
+                              size_t backingHeight,
+                              size_t width,
+                              size_t height) {
+    float backingAspectRatio = (float) backingWidth / (float) backingHeight;
+    float targetAspectRatio = (float) width / (float) height;
+    float scalingFactor = 1.0f;
+
+    if (fillScreen) {
+        if (backingAspectRatio > targetAspectRatio) {
+            scalingFactor = (float) backingWidth / (float) width;
+        } else {
+            scalingFactor = (float) backingHeight / (float) height;
+        }
+    }
+
+    return scalingFactor;
 }
 
 void ogl::draw_frame(const float texMat[]) {
@@ -193,7 +218,7 @@ void ogl::draw_frame(const float texMat[]) {
     glEnableVertexAttribArray(st);
     glVertexAttribPointer(st, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void *)(3 * sizeof(float)));
     
-    glViewport(0, 0, width, height);
+    glViewport(0, 0, screen_width, screen_height);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[1]);  // use indices
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glDisableVertexAttribArray(vertex_position);

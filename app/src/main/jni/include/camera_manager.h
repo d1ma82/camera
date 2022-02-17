@@ -1,13 +1,11 @@
 #ifndef _CAMERA_MANAGER_H
 #define _CAMERA_MANAGER_H
 
-#include <functional>
-#include <vector>
-#include <memory>
-#include <string>
-#include <thread>
 #include <camera/NdkCameraManager.h>
 #include <media/NdkImageReader.h>
+#include <functional>
+#include <vector>
+
 
 using output_target = std::unique_ptr<ACameraOutputTarget, std::function<void(ACameraOutputTarget*)>>;
 using capture_request = std::unique_ptr<ACaptureRequest, std::function<void(ACaptureRequest*)>>;
@@ -61,7 +59,7 @@ public:
     void select_camera(const char* facing) noexcept;
     void create_session(ANativeWindow* window) noexcept;
     void start_preview(bool start) noexcept;
-    void take_photo() noexcept;
+    void take_photo(const char* path) noexcept;
     void calc_compatible_preview_size(int32_t width, int32_t height, int32_t out_compatible_res[2]) noexcept;
     void init_surface(int32_t texture_id) noexcept;
     void next_shader() noexcept;

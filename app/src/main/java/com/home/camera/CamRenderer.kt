@@ -8,8 +8,9 @@ import android.util.Log
 import android.view.Surface
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import kotlin.math.log
 
-class CamRenderer(private val view: GLSurfaceView):
+class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
         GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
 
     private val logTag = "CamRenderer"
@@ -31,21 +32,27 @@ class CamRenderer(private val view: GLSurfaceView):
 
     fun applyNextShader() {
         Log.d(logTag, "applyNextShader")
-        cameraWrapper.nextShader(cameraHandle)
+      //  cameraWrapper.nextShader(cameraHandle)
+    }
+
+    fun takePhoto() {
+        cameraWrapper.takePhoto(cameraHandle)
     }
 
     override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
         Log.d(logTag, "onSurfaceCreated")
-        cameraHandle = cameraWrapper.create("back")
-        GLES30.glGenTextures(1, textures, 0)
-        GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textures[0])
-        surfaceTexture = SurfaceTexture(textures[0])
-        surfaceTexture.setOnFrameAvailableListener(this)
-        surface = Surface(surfaceTexture)
+
+            GLES30.glGenTextures(1, textures, 0)
+            GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textures[0])
+            cameraHandle = cameraWrapper.create("back", dcim)
+            surfaceTexture = SurfaceTexture(textures[0])
+            surfaceTexture.setOnFrameAvailableListener(this)
+            surface = Surface(surfaceTexture)
     }
 
     override fun onSurfaceChanged(p0: GL10?, width: Int, height: Int) {
-        Log.d(logTag, "onSurfaceChanged $width x $height")
+        Log.d(logTag, "onSurfaceChanged $width x $height; handle = $cameraHandle")
+
         if (!view.isEnabled) {
             view.isEnabled = true
             return
@@ -59,6 +66,7 @@ class CamRenderer(private val view: GLSurfaceView):
 
        // Log.d(logTag, "onDrawFrame")
         if (!view.isEnabled) return
+       // Log.d(logTag, texMatrix.contentToString())
         cameraWrapper.onDrawFrame(cameraHandle, texMatrix)
     }
 
@@ -73,4 +81,8 @@ class CamRenderer(private val view: GLSurfaceView):
             view.requestRender()
         }
     }
+    //      [0.0, -1.0, 0.0, 0.0,
+        //  -1.0, 0.0, 0.0, 0.0,
+        //  0.0, 0.0, 1.0, 0.0,
+        //  1.0, 1.0, 0.0, 1.0]
 }

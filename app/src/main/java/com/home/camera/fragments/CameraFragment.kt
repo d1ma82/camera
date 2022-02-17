@@ -40,7 +40,7 @@ class CameraFragment: Fragment(), TextureView.SurfaceTextureListener{
     override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
 
         Log.d(logTag, "onSurfaceTextureAvailable $width x $height")
-        cameraHandle = cameraWrapper.create("back")
+        cameraHandle = cameraWrapper.create("back", "")
         val compatibleResolution = cameraWrapper.compatibleResolution(cameraHandle, 1600, 1200)
         surfaceTexture.setDefaultBufferSize(compatibleResolution[0], compatibleResolution[1])
         surface = Surface(surfaceTexture)

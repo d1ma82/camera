@@ -3,19 +3,26 @@ package com.home.camera.fragments
 import android.annotation.SuppressLint
 import android.opengl.GLSurfaceView
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
 import android.view.*
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.home.camera.CamRenderer
 import com.home.camera.databinding.FragmentCameraGlBinding
+import java.io.File
+
 
 private const val logTag = "CameraFragmentGL"
 
-class CameraFragmentGL:Fragment(), View.OnTouchListener {
+class CameraFragmentGL:Fragment(), View.OnTouchListener, View.OnClickListener {
 
     private lateinit var  binding: FragmentCameraGlBinding
     private lateinit var surfaceView: GLSurfaceView
     private lateinit var camRenderer: CamRenderer
+    private lateinit var  dcim: String
+
+
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreateView(
@@ -24,12 +31,18 @@ class CameraFragmentGL:Fragment(), View.OnTouchListener {
         savedInstanceState: Bundle?
     ): View {
         binding = FragmentCameraGlBinding.inflate(inflater,container, false)
+        val aDirArray: Array<File> = ContextCompat.getExternalFilesDirs(requireContext(), Environment.DIRECTORY_DCIM)
+        dcim = aDirArray[0].path
+        Log.d(logTag, dcim)
+        binding.fab.setOnClickListener(this)
+
         surfaceView = binding.surfaceView
         surfaceView.setEGLContextClientVersion(3)
-        camRenderer = CamRenderer(surfaceView)
+        camRenderer = CamRenderer(surfaceView, dcim)
         surfaceView.setRenderer(camRenderer)
         surfaceView.setOnTouchListener(this)
         surfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+
         return binding.root
     }
 
@@ -64,6 +77,10 @@ class CameraFragmentGL:Fragment(), View.OnTouchListener {
             }
         }
     }
-    //TODO: Link button with lib
-    // begin with net
+
+    override fun onClick(p0: View?) {
+
+        camRenderer.takePhoto()
+    }
+
 }
