@@ -7,7 +7,6 @@
 #include <string>
 
 static int32_t screen_width = 0, screen_height = 0;
-static int32_t img_width = 0, img_height = 0;
 static int32_t still_cap_width = 0, still_cap_height = 0;
 static bool session_created = false, preview_started = false;
 static const char* dcim = nullptr;
@@ -127,7 +126,6 @@ static AImageReader_ImageListener jpg_listener {
 NDKCamera::NDKCamera(const char* facing) {
 
     screen_width = 0, screen_height = 0;
-    img_width = 0, img_height = 0;
     still_cap_width = 0, still_cap_height = 0;
     session_created = false, preview_started = false;
     dcim = nullptr;
@@ -335,12 +333,12 @@ void NDKCamera::calc_compatible_preview_size(int32_t width, int32_t height, int3
 
 void NDKCamera::init_surface(int32_t texture_id) noexcept {
 
-    ogl::init_surface(screen_width, screen_height, img_width, img_height, texture_id);
+    ogl::init_surface(screen_width, screen_height, texture_id);
 }
 
-void NDKCamera::draw_frame(const float texture_mat[]) noexcept {
+void NDKCamera::draw_frame(const float transform_mat[]) noexcept {
 
-    ogl::draw_frame(texture_mat);
+    ogl::draw_frame(transform_mat);
 }
 
 void NDKCamera::next_shader() noexcept {

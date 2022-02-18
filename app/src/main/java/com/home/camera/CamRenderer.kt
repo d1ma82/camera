@@ -8,7 +8,7 @@ import android.util.Log
 import android.view.Surface
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.math.log
+
 
 class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
         GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
@@ -32,7 +32,7 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
 
     fun applyNextShader() {
         Log.d(logTag, "applyNextShader")
-      //  cameraWrapper.nextShader(cameraHandle)
+        cameraWrapper.nextShader(cameraHandle)
     }
 
     fun takePhoto() {

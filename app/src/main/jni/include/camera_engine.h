@@ -24,7 +24,7 @@ public:
     void next_shader();
     void start_preview(bool start);
     void take_photo();
-    void draw_frame(const jfloatArray texMatArray);
+    void draw_frame(const jfloatArray transform_mat);
     const jintArray get_compatible_res(jint width, jint height) const;
     int32_t get_sensor_orientation();
 };

@@ -3,17 +3,16 @@
 #include <GLES3/gl3.h>
 #include <GLES2/gl2ext.h>
 #include <vector>
-//#include <glm/glm.hpp>
-//#include <glm/gtc/matrix_transform.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 GLuint texture_id = 0;
-GLint vertex_position, st, tex_sampler, tex_matrix;
+GLint vertex_position, st, tex_sampler, transform;
 GLuint buffers[2];
 
 static int32_t screen_width = 0, screen_height = 0;
-static int32_t img_width = 0, img_height = 0;
 
-enum Type {NORMAL, BLUR, COUNT} ;
+enum Type {NORMAL, BLUR, PREDATOR, COUNT} ;
 
 typedef struct {
     Type type;
@@ -25,15 +24,14 @@ std::vector<Program> programs;
 Program* current_program = nullptr;
 
 static const char* vertex_shader_src = R"(
-    
     attribute vec3 vertex_position;
     attribute vec2 st;
     varying vec2 var_st;
-    uniform mat4 tex_matrix; // transform matrix for 90deg camera rotation
-    
+    uniform mat4 transform;     // transform traditional texture coordinates, 
+                                // to the proper sampling location in the streamed texture.
     void main()
     {
-        var_st = (tex_matrix * vec4(st.x, st.y, 0, 1.0)).xy;
+        var_st = (transform * vec4(st.x, st.y, 0, 1.0)).xy;
         //var_st = st;
 
         gl_Position = vec4(vertex_position, 1.0);
@@ -72,8 +70,27 @@ static const char fragment_blur_src[] = R"(
         sample2 = texture2D(tex_sampler, vec2(var_st.x + step, var_st.y - step));
         sample3 = texture2D(tex_sampler, vec2(var_st.x - step, var_st.y + step));
         gl_FragColor = (sample0 + sample1 + sample2 + sample3) / 4.0;
-    }
-)";
+    })";
+
+// Predator Thermal Vision Filter
+static const char fragment_predator_src[] = R"(
+
+    #extension GL_OES_EGL_image_external : require
+    precision highp float;
+    uniform samplerExternalOES tex_sampler;
+    varying vec2 var_st;
+
+    void main() {
+        vec4 color = texture2D(tex_sampler, var_st);
+        vec3 colors[3];
+        colors[0] = vec3(0.,0.,1.);
+        colors[1] = vec3(1.,1.,0.);
+        colors[2] = vec3(1.,0.,0.);
+        float lum = (color.r + color.g + color.b) /3.;
+        int idx = (lum < 0.5) ? 0 : 1;
+        vec3 rgb = mix(colors[idx], colors[idx+1], (lum-float(idx) * 0.5) / 0.5);
+        gl_FragColor = vec4(rgb, 1.0);
+    })";
 
 // Note that the coordinates of this shape are defined in a counterclockwise order. 
 // The drawing order is important because it defines which side is the front face of the shape, 
@@ -82,12 +99,12 @@ static const char fragment_blur_src[] = R"(
 static float vertices[] {
 //   x   y   z    s   t  
     -1,  1, .0f,  0,  1,      // top left
-    -1, -1, .0f,  0,  0,      // bottom left  
-     1, -1, .0f,  1,  0,      // bottom right
+     1, -1, .0f,  1,  0,      // bottom right 
+    -1, -1, .0f,  0,  0,      // bottom left 
      1,  1, .0f,  1,  1       // top right  
 };
 
-static GLuint indices[] { 0, 1, 2, 0, 2, 3 };
+static GLuint indices[] { 0, 1, 2, 0, 1, 3 };
 
 
 
@@ -134,18 +151,17 @@ void ogl::next_shader() {
 
     switch (current_program->type) {
         default: 
-        case NORMAL: current_program = &programs[BLUR]; break;
-        case BLUR:   current_program = &programs[NORMAL]; break;
+        case NORMAL:       current_program = &programs[BLUR]; break;
+        case BLUR:         current_program = &programs[PREDATOR]; break;
+        case PREDATOR:     current_program = &programs[NORMAL]; break;
     }
 }
 
-void ogl::init_surface (int32_t sw, int32_t sh, int32_t iw, int32_t ih, int32_t tex_id) {
+void ogl::init_surface (int32_t sw, int32_t sh, int32_t tex_id) {
 
     if (texture_id == tex_id) return; // on android side onSurfaceChanged may call couple times
 
     texture_id = tex_id; screen_width = sw; screen_height = sh;
-    img_width = iw; img_height = ih;
-
     programs.resize(COUNT);
 
     int i = 0;
@@ -153,8 +169,11 @@ void ogl::init_surface (int32_t sw, int32_t sh, int32_t iw, int32_t ih, int32_t 
 
         el.type = Type(i);
         el.vertex_shader = create_shader(vertex_shader_src, GL_VERTEX_SHADER);
-        if (i == BLUR) el.fragment_shader = create_shader(fragment_blur_src, GL_FRAGMENT_SHADER); 
-        else el.fragment_shader = create_shader(fragment_normal_src, GL_FRAGMENT_SHADER);
+
+        if (i == BLUR)          el.fragment_shader = create_shader(fragment_blur_src, GL_FRAGMENT_SHADER); 
+        else if (i == PREDATOR) el.fragment_shader = create_shader(fragment_predator_src, GL_FRAGMENT_SHADER); 
+        else                    el.fragment_shader = create_shader(fragment_normal_src, GL_FRAGMENT_SHADER);
+
         el.id =  create_program(el.vertex_shader, el.fragment_shader);
         i++;
     }
@@ -162,7 +181,9 @@ void ogl::init_surface (int32_t sw, int32_t sh, int32_t iw, int32_t ih, int32_t 
     vertex_position = glGetAttribLocation(current_program->id, "vertex_position");
     st =              glGetAttribLocation(current_program->id, "st");
     tex_sampler =     glGetUniformLocation(current_program->id, "tex_sampler");
-    tex_matrix =      glGetUniformLocation(current_program->id, "tex_matrix");
+    transform =       glGetUniformLocation(current_program->id, "transform");
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     glGenBuffers(2, buffers);
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
@@ -174,29 +195,21 @@ void ogl::init_surface (int32_t sw, int32_t sh, int32_t iw, int32_t ih, int32_t 
     LOGI("Init surface %d x %d; texture_id = %d", screen_width, screen_height, texture_id)
 }
 
-float aspect_ratio_correction(bool fillScreen,
-                              size_t backingWidth,
-                              size_t backingHeight,
-                              size_t width,
-                              size_t height) {
-    float backingAspectRatio = (float) backingWidth / (float) backingHeight;
-    float targetAspectRatio = (float) width / (float) height;
-    float scalingFactor = 1.0f;
+/*const glm::mat4 compensate_st_matrix() {
 
-    if (fillScreen) {
-        if (backingAspectRatio > targetAspectRatio) {
-            scalingFactor = (float) backingWidth / (float) width;
-        } else {
-            scalingFactor = (float) backingHeight / (float) height;
-        }
-    }
+        const glm::mat4 st_coord{
+                {  vertices[3],  vertices[4],  0, 0 }, 
+                {  vertices[8],  vertices[9],  0, 0 }, 
+                {  vertices[13], vertices[14], 0, 0 }, 
+                {  vertices[18], vertices[19], 0, 0 }
+        };
 
-    return scalingFactor;
-}
+        glm::mat4 rot = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0,0,1));
+        return st_coord * rot;
+}*/
 
-void ogl::draw_frame(const float texMat[]) {
+void ogl::draw_frame(const float transform_mat[]) {
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glClearColor(0,0,0,1);
 
     glUseProgram(current_program->id);
@@ -209,7 +222,7 @@ void ogl::draw_frame(const float texMat[]) {
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glUniform1i(tex_sampler, 0);
 
-    glUniformMatrix4fv(tex_matrix, 1, false, texMat);
+    glUniformMatrix4fv(transform, 1, false, transform_mat);
   
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
     glEnableVertexAttribArray(vertex_position);
