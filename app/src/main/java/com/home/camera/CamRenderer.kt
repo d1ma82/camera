@@ -15,7 +15,6 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
 
     private val logTag = "CamRenderer"
     private var cameraHandle:Long = 0
-    private val texMatrix = FloatArray(16)
     private val textures = IntArray(1)
     private lateinit var surfaceTexture: SurfaceTexture
     private lateinit var surface: Surface
@@ -67,7 +66,7 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
        // Log.d(logTag, "onDrawFrame")
         if (!view.isEnabled) return
        // Log.d(logTag, texMatrix.contentToString())
-        cameraWrapper.onDrawFrame(cameraHandle, texMatrix)
+        cameraWrapper.onDrawFrame(cameraHandle)
     }
 
     override fun onFrameAvailable(p0: SurfaceTexture?) {
@@ -77,7 +76,6 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
         view.queueEvent{
 
             p0?.updateTexImage()
-            p0?.getTransformMatrix(texMatrix)
             view.requestRender()
         }
     }

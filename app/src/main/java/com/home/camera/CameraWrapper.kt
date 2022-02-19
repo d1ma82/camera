@@ -12,7 +12,7 @@ class CameraWrapper {
     external fun compatibleResolution(camera: Long, width: Int, height: Int):IntArray
     external fun onPreviewSurfaceCreated(camera: Long, surface: Surface, texture_id: Int = 0)
     external fun onPreviewSurfaceDestroyed(camera: Long, surface: Surface?)
-    external fun onDrawFrame(camera: Long, tex_mat: FloatArray)
+    external fun onDrawFrame(camera: Long)
     external fun nextShader(camera: Long)
     external fun takePhoto(camera: Long)
 

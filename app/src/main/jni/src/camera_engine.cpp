@@ -51,11 +51,11 @@ void CameraEngine::start_preview(bool start){
     camera->start_preview(start);
 }
 
-void CameraEngine::draw_frame(const jfloatArray transform_mat) {
+void CameraEngine::draw_frame() {
 
-    float* arr = env->GetFloatArrayElements(transform_mat, 0);
-    camera->draw_frame(arr);
-    env->ReleaseFloatArrayElements(transform_mat, arr, 0);
+   // float* arr = env->GetFloatArrayElements(transform_mat, 0);
+    camera->draw_frame();
+   // env->ReleaseFloatArrayElements(transform_mat, arr, 0);
 }
 
 const jintArray CameraEngine::get_compatible_res(jint width, jint height) const{

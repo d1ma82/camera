@@ -42,7 +42,6 @@ private:
    
     const  char* cam_id = nullptr;
     uint32_t facing = ACAMERA_LENS_FACING_BACK;
-    uint32_t orientation = 0;
 
     void avalabale_stream_conf(AIMAGE_FORMATS format, 
         std::function<void(int32_t width, int32_t height)> callback);
@@ -56,6 +55,7 @@ public:
     NDKCamera& operator=(NDKCamera&&) = delete;
     ~NDKCamera();  
 
+    int32_t sensor_orientation() noexcept;
     void select_camera(const char* facing) noexcept;
     void create_session(ANativeWindow* window) noexcept;
     void start_preview(bool start) noexcept;
@@ -63,7 +63,7 @@ public:
     void calc_compatible_preview_size(int32_t width, int32_t height, int32_t out_compatible_res[2]) noexcept;
     void init_surface(int32_t texture_id) noexcept;
     void next_shader() noexcept;
-    void draw_frame(const float transform_mat[]) noexcept;
+    void draw_frame() noexcept;
 };
 
 #endif

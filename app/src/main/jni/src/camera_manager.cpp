@@ -7,6 +7,7 @@
 #include <string>
 
 static int32_t screen_width = 0, screen_height = 0;
+static int32_t buffer_width = 0, buffer_height = 0;
 static int32_t still_cap_width = 0, still_cap_height = 0;
 static bool session_created = false, preview_started = false;
 static const char* dcim = nullptr;
@@ -126,6 +127,7 @@ static AImageReader_ImageListener jpg_listener {
 NDKCamera::NDKCamera(const char* facing) {
 
     screen_width = 0, screen_height = 0;
+    buffer_width = 0, buffer_height = 0;
     still_cap_width = 0, still_cap_height = 0;
     session_created = false, preview_started = false;
     dcim = nullptr;
@@ -326,19 +328,29 @@ void NDKCamera::calc_compatible_preview_size(int32_t width, int32_t height, int3
                   min = diff;
                   out_compatible_res[0] = w;
                   out_compatible_res[1] = h;
+                  buffer_width = w; buffer_height = h;
             }
     });
     LOGI("Compatible preview size, %d x %d", out_compatible_res[0], out_compatible_res[1])
 }
 
-void NDKCamera::init_surface(int32_t texture_id) noexcept {
+int32_t NDKCamera::sensor_orientation() noexcept {
 
-    ogl::init_surface(screen_width, screen_height, texture_id);
+    ACameraMetadata_const_entry entry = {0};
+    CALL(ACameraMetadata_getConstEntry(metadata, ACAMERA_SENSOR_ORIENTATION, &entry))
+    LOGI("ACAMERA_SENSOR_ORIENTATION, %d", entry.data.i32[0])
+    return entry.data.i32[0];
 }
 
-void NDKCamera::draw_frame(const float transform_mat[]) noexcept {
+void NDKCamera::init_surface(int32_t texture_id) noexcept {
 
-    ogl::draw_frame(transform_mat);
+    ogl::Properties props {screen_width, screen_height, buffer_width, buffer_height, sensor_orientation(), texture_id};
+    ogl::init_surface(props);
+}
+
+void NDKCamera::draw_frame() noexcept {
+
+    ogl::draw_frame();
 }
 
 void NDKCamera::next_shader() noexcept {

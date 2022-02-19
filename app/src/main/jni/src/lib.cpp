@@ -99,12 +99,12 @@ extern "C" JNIEXPORT jintArray JNICALL Java_com_home_camera_CameraWrapper_compat
 extern "C" JNIEXPORT void JNICALL Java_com_home_camera_CameraWrapper_onDrawFrame(
     JNIEnv* env, 
     jobject instance,
-    jlong cam_obj,
-    jfloatArray transform_mat
+    jlong cam_obj
+    //jfloatArray transform_mat
 ) {
     ASSERT(cam_obj && (jlong)engine == cam_obj, "onDrawFrame: NativeObject should not be null Pointer")
     CameraEngine* app = reinterpret_cast<CameraEngine*>(cam_obj);
-    app->draw_frame(transform_mat);
+    app->draw_frame();
 }
 
 extern "C" JNIEXPORT void JNICALL Java_com_home_camera_CameraWrapper_nextShader(

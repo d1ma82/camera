@@ -5,12 +5,12 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 
-GLuint texture_id = 0;
 GLint vertex_position, st, tex_sampler, transform;
 GLuint buffers[2];
 
-static int32_t screen_width = 0, screen_height = 0;
+static ogl::Properties properties;
 
 enum Type {NORMAL, BLUR, PREDATOR, COUNT} ;
 
@@ -106,7 +106,7 @@ static float vertices[] {
 
 static GLuint indices[] { 0, 1, 2, 0, 1, 3 };
 
-
+glm::mat4 compensate_matrix = glm::mat4(1.0f);
 
 GLuint create_shader (const char* src, GLenum type) {
 
@@ -157,11 +157,29 @@ void ogl::next_shader() {
     }
 }
 
-void ogl::init_surface (int32_t sw, int32_t sh, int32_t tex_id) {
+// This code is need to be tested in other devices
+void calc_compesate_matrix() {
 
-    if (texture_id == tex_id) return; // on android side onSurfaceChanged may call couple times
+    glm::mat4 st {
+        0, 1, 0, 0,
+        1, 0, 0, 0,
+        0, 0, 0, 0,
+        1, 1, 0, 0
+    };
 
-    texture_id = tex_id; screen_width = sw; screen_height = sh;
+    if (properties.sensor_orient == 90) 
+        compensate_matrix = st * glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0,0,1));
+    
+    LOGI("Compensate matrix= %s", glm::to_string(compensate_matrix).c_str())
+}
+
+void ogl::init_surface (const Properties& props) {
+
+    if (properties.texture_id == props.texture_id) return; // on android side onSurfaceChanged may call couple times
+
+    properties = props;
+
+    calc_compesate_matrix();
     programs.resize(COUNT);
 
     int i = 0;
@@ -183,7 +201,7 @@ void ogl::init_surface (int32_t sw, int32_t sh, int32_t tex_id) {
     tex_sampler =     glGetUniformLocation(current_program->id, "tex_sampler");
     transform =       glGetUniformLocation(current_program->id, "transform");
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    glClearColor(0,0,0,1);
 
     glGenBuffers(2, buffers);
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
@@ -192,37 +210,25 @@ void ogl::init_surface (int32_t sw, int32_t sh, int32_t tex_id) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
 
-    LOGI("Init surface %d x %d; texture_id = %d", screen_width, screen_height, texture_id)
+    LOGI("Init surface %d x %d; texture_id = %d", properties.screen_width, properties.screen_height, properties.texture_id)
 }
 
-/*const glm::mat4 compensate_st_matrix() {
 
-        const glm::mat4 st_coord{
-                {  vertices[3],  vertices[4],  0, 0 }, 
-                {  vertices[8],  vertices[9],  0, 0 }, 
-                {  vertices[13], vertices[14], 0, 0 }, 
-                {  vertices[18], vertices[19], 0, 0 }
-        };
+void ogl::draw_frame() {
 
-        glm::mat4 rot = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0,0,1));
-        return st_coord * rot;
-}*/
-
-void ogl::draw_frame(const float transform_mat[]) {
-
-    glClearColor(0,0,0,1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     glUseProgram(current_program->id);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_EXTERNAL_OES, texture_id);
+    glBindTexture(GL_TEXTURE_EXTERNAL_OES, properties.texture_id);
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glUniform1i(tex_sampler, 0);
 
-    glUniformMatrix4fv(transform, 1, false, transform_mat);
+    glUniformMatrix4fv(transform, 1, false, &compensate_matrix[0][0]);
   
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
     glEnableVertexAttribArray(vertex_position);
@@ -231,7 +237,7 @@ void ogl::draw_frame(const float transform_mat[]) {
     glEnableVertexAttribArray(st);
     glVertexAttribPointer(st, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void *)(3 * sizeof(float)));
     
-    glViewport(0, 0, screen_width, screen_height);
+    glViewport(0, 0, properties.screen_width, properties.screen_height);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[1]);  // use indices
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glDisableVertexAttribArray(vertex_position);
@@ -247,5 +253,5 @@ void ogl::destroy() {
     glDeleteBuffers(2, buffers);
     programs.resize(0);
     current_program = nullptr;
-    texture_id = 0;
+    properties = {0,0,0,0,0,0};
 }
