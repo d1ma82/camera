@@ -26,6 +26,8 @@ struct RequestInfo {
 
 enum RequestIndex{PREVIEW_IDX, PHOTO_IDX, REQUESTS_COUNT};
 
+const AIMAGE_FORMATS STILL_CAPTURE_FORMAT = AIMAGE_FORMAT_JPEG;
+
 class NDKCamera {
 private:
     camera_status_t status = ACAMERA_OK;
@@ -42,10 +44,10 @@ private:
    
     const  char* cam_id = nullptr;
     uint32_t facing = ACAMERA_LENS_FACING_BACK;
-
+    
     void avalabale_stream_conf(AIMAGE_FORMATS format, 
         std::function<void(int32_t width, int32_t height)> callback);
-    void still_capture_size();
+    void still_capture_size(AIMAGE_FORMATS format);
 public:
     NDKCamera(const char* facing);
    // copy-move disabled

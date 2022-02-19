@@ -139,7 +139,7 @@ NDKCamera::NDKCamera(const char* facing) {
     memset(requests.data(), 0, requests.size() * sizeof(RequestInfo));
     LOGI("Camera count: %d", id_list->numCameras)
     select_camera(facing);
-    still_capture_size();
+    still_capture_size(STILL_CAPTURE_FORMAT);
 }
 
 NDKCamera::~NDKCamera() {
@@ -283,9 +283,9 @@ void NDKCamera::start_preview(bool start) noexcept {
     }
 }
 
-void NDKCamera::still_capture_size() {
+void NDKCamera::still_capture_size(AIMAGE_FORMATS format) {
 
-    avalabale_stream_conf(AIMAGE_FORMAT_JPEG, [] (int32_t width, int32_t height) {
+    avalabale_stream_conf(format, [] (int32_t width, int32_t height) {
 
             still_cap_width = std::max(still_cap_width, width);
             still_cap_height = std::max(still_cap_height, height);
