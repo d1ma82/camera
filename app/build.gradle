@@ -6,6 +6,19 @@ plugins {
 android {
     compileSdk 31
 
+    def versionPropsFile = file('version.properties')
+    if (versionPropsFile.canRead()) {
+        Properties props = new Properties()
+        props.load(new FileInputStream(versionPropsFile))
+        def major = props['VERSION_MAJOR'].toInteger()
+        def build = props['BUILD'].toInteger() + 1
+        props['VERSION_MAJOR'] = major.toString()
+        props['BUILD'] = build.toString()
+        props.store(new FileOutputStream(versionPropsFile), null)
+    } else {
+        throw new GradleException("Could not read version.properties!")
+    }
+
     defaultConfig {
         applicationId "com.home.camera"
         minSdk 24
