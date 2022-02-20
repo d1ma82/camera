@@ -19,12 +19,12 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
     private lateinit var surfaceTexture: SurfaceTexture
     private lateinit var surface: Surface
     private val cameraWrapper = CameraWrapper()
+    private var selectedCamera:Int = 0
 
     fun destroy() {
 
         Log.d(logTag, "onDestroy")
 
-        cameraWrapper.onPreviewSurfaceDestroyed(cameraHandle, null)
         cameraWrapper.delete(cameraHandle)
         cameraHandle = 0
     }
@@ -34,8 +34,17 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
         cameraWrapper.nextShader(cameraHandle)
     }
 
+    fun nextCamera() {
+
+        selectedCamera++
+        if (selectedCamera >= 2) selectedCamera = 0
+        cameraWrapper.selectCamera(cameraHandle, selectedCamera)
+        onSurfaceChanged(null, view.width, view.height)
+    }
+
     fun takePhoto() {
-        cameraWrapper.takePhoto(cameraHandle)
+        //cameraWrapper.takePhoto(cameraHandle)
+        nextCamera()
     }
 
     override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
@@ -43,7 +52,7 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
 
             GLES30.glGenTextures(1, textures, 0)
             GLES30.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textures[0])
-            cameraHandle = cameraWrapper.create("back", dcim)
+            cameraHandle = cameraWrapper.create("android", dcim)
             surfaceTexture = SurfaceTexture(textures[0])
             surfaceTexture.setOnFrameAvailableListener(this)
             surface = Surface(surfaceTexture)

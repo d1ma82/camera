@@ -1,30 +1,51 @@
 #include "log.h"
 #include "camera_manager.h"
 #include "opengl.h"
+#include <vector>
 #include <dirent.h>
 #include <thread>
 #include <memory>
 #include <string>
 
-static int32_t screen_width = 0, screen_height = 0;
-static int32_t buffer_width = 0, buffer_height = 0;
-static int32_t still_cap_width = 0, still_cap_height = 0;
-static bool session_created = false, preview_started = false;
-static const char* dcim = nullptr;
+namespace NDKManager{
+    static manager camera_manager = nullptr;
+    static id_list camera_list = nullptr;
+}
 
-void OnCameraAvailable(void* ctx, const char* id) {}
-void OnCameraUnavailable(void* ctx, const char* id) {}
+ static const char* dcim = nullptr;
+ static std::vector<RequestInfo> requests;
+
+static void OnCameraAvailable(void* ctx, const char* id) {}
+static void OnCameraUnavailable(void* ctx, const char* id) {}
 
 static ACameraManager_AvailabilityCallbacks cameraMgrListener = {
       cameraMgrListener.context = nullptr,
       cameraMgrListener.onCameraAvailable = OnCameraAvailable,
       cameraMgrListener.onCameraUnavailable = OnCameraUnavailable,
-  };
+};
 
-void onDisconnected(void* context, ACameraDevice* device){
+void NDKManager::manager_new_instance(){
+    
+    if (camera_manager == nullptr) {
+
+        ACameraIdList* list = nullptr;
+        camera_manager = {ACameraManager_create(), ACameraManager_delete};
+        ACameraManager_registerAvailabilityCallback(camera_manager.get(), &cameraMgrListener);
+        ACameraManager_getCameraIdList(camera_manager.get(), &list);
+        camera_list = {list, ACameraManager_deleteCameraIdList};
+        LOGI("Camera count: %d", camera_list -> numCameras)
+    }
+}
+
+uint32_t NDKManager::count_camera() {
+
+    return camera_list -> numCameras;
+}
+
+static void onDisconnected(void* context, ACameraDevice* device){
     LOGI("Device disconnected")
 }
-void onError(void* context, ACameraDevice* device, int error){
+static void onError(void* context, ACameraDevice* device, int error){
     LOGI("Device error, %d", error)
 }
 
@@ -34,9 +55,9 @@ static ACameraDevice_stateCallbacks cameraDeviceCallbacks = {
         cameraDeviceCallbacks.onError = onError,
 };
 
-void onSessionActive(void* context, ACameraCaptureSession *session) {}
-void onSessionReady(void* context, ACameraCaptureSession *session) {}
-void onSessionClosed(void* context, ACameraCaptureSession *session) {}
+static void onSessionActive(void* context, ACameraCaptureSession *session) {}
+static void onSessionReady(void* context, ACameraCaptureSession *session) {}
+static void onSessionClosed(void* context, ACameraCaptureSession *session) {}
 
 static ACameraCaptureSession_stateCallbacks sessionStateCallbacks {
         sessionStateCallbacks.context = nullptr,
@@ -45,14 +66,14 @@ static ACameraCaptureSession_stateCallbacks sessionStateCallbacks {
         sessionStateCallbacks.onClosed = onSessionClosed
 };
 
-void onCaptureFailed(void* context, ACameraCaptureSession* session, ACaptureRequest* request, ACameraCaptureFailure* failure) {
+static void onCaptureFailed(void* context, ACameraCaptureSession* session, ACaptureRequest* request, ACameraCaptureFailure* failure) {
     LOGI("onCaptureFailed %d", failure->reason)
 }
-void onCaptureSequenceCompleted(void* context, ACameraCaptureSession* session, int sequenceId, int64_t frameNumber){
+static void onCaptureSequenceCompleted(void* context, ACameraCaptureSession* session, int sequenceId, int64_t frameNumber){
     //resume preview
 }
-void onCaptureSequenceAborted(void* context, ACameraCaptureSession* session, int sequenceId){}
-void onCaptureCompleted (
+static void onCaptureSequenceAborted(void* context, ACameraCaptureSession* session, int sequenceId){}
+static void onCaptureCompleted (
         void* context, ACameraCaptureSession* session,
         ACaptureRequest* request, const ACameraMetadata* result){}
 
@@ -67,7 +88,7 @@ static ACameraCaptureSession_captureCallbacks captureCallbacks {
         captureCallbacks.onCaptureBufferLost = nullptr,
 };
 
-void write_file(AImage* image) {
+static void write_file(AImage* image) {
 
     int32_t w, h;
     AImage_getWidth(image, &w);
@@ -102,7 +123,7 @@ void write_file(AImage* image) {
     AImage_delete(image);
 }
 
-void imageCallback(void* preview_window, AImageReader* reader){
+static void imageCallback(void* preview_window, AImageReader* reader){
 
     int32_t format;
     media_status_t status = AImageReader_getFormat(reader, &format);
@@ -124,86 +145,64 @@ static AImageReader_ImageListener jpg_listener {
             jpg_listener.onImageAvailable = imageCallback,
 };
 
-NDKCamera::NDKCamera(const char* facing) {
-
-    screen_width = 0, screen_height = 0;
-    buffer_width = 0, buffer_height = 0;
-    still_cap_width = 0, still_cap_height = 0;
-    session_created = false, preview_started = false;
-    dcim = nullptr;
-    manager = ACameraManager_create();
-    CALL(ACameraManager_registerAvailabilityCallback(manager, &cameraMgrListener));
-    CALL(ACameraManager_getCameraIdList(manager, &id_list));
-    CALL(ACaptureSessionOutputContainer_create(&container));
+NDKCamera::NDKCamera(uint32_t id) {
+    
     requests.resize(REQUESTS_COUNT);
     memset(requests.data(), 0, requests.size() * sizeof(RequestInfo));
-    LOGI("Camera count: %d", id_list->numCameras)
-    select_camera(facing);
-    still_capture_size(STILL_CAPTURE_FORMAT);
+    
+    this->facing = (acamera_metadata_enum_acamera_lens_facing) id;
+    LOGI("Createing camera facing= %d", id)
+    // Load camera metadata
+    using namespace NDKManager;
+    for (int i=0; i<camera_list->numCameras; i++) {
+        
+        CALL(ACameraManager_getCameraCharacteristics(
+            camera_manager.get(), camera_list->cameraIds[i], &metadata));
+
+        ACameraMetadata_const_entry lens = {0};
+        CALL(ACameraMetadata_getConstEntry(metadata, ACAMERA_LENS_FACING, &lens));
+        auto entry_facing = (acamera_metadata_enum_acamera_lens_facing) lens.data.u8[0];
+
+        if ((entry_facing == this->facing) && (status == ACAMERA_OK)) { camera_id = camera_list->cameraIds[i];  break; }
+        ACameraMetadata_free(metadata); // do not remove!
+    }
+    calc_still_capture_size(AIMAGE_FORMAT_JPEG);
 }
 
 NDKCamera::~NDKCamera() {
 
-    LOGI("NDKCamera destroy")
+    LOGI("Destroy camera %d", facing)
     
-    CALL(ACameraCaptureSession_stopRepeating(session))
-    ACameraCaptureSession_close(session);
-
-    requests.resize(0);
-
+    start_preview(false);
+    close_session();
     ogl::destroy();
-
-    if (container) ACaptureSessionOutputContainer_free(container);
-    container = nullptr;
 
     if (metadata) ACameraMetadata_free(metadata);
     metadata = nullptr;
 
-    if (device) CALL(ACameraDevice_close(device));
-    device = nullptr;
+    requests.resize(0);
 
-    if (id_list) ACameraManager_deleteCameraIdList(id_list);
-    id_list = nullptr;
-
-    if (manager) ACameraManager_delete(manager);
-    manager = nullptr;
-    LOGI("NDKCamera destroyed")
+    LOGI("Camera Destroyed")
 }
 
-void NDKCamera::select_camera(const char* facing) noexcept {
 
-    if (strncmp(facing, "back", 1) == 0){
-            this->facing = ACAMERA_LENS_FACING_BACK;
-    }
-    else if (strncmp(facing, "front", 1) == 0) {
-            this->facing = ACAMERA_LENS_FACING_FRONT;
-    }
-
-    for (int i=0; i<id_list->numCameras; i++) {
-        
-        CALL(ACameraManager_getCameraCharacteristics(
-            manager, id_list->cameraIds[i], &metadata));
-
-        ACameraMetadata_const_entry lens = {0};
-        CALL(ACameraMetadata_getConstEntry(metadata, ACAMERA_LENS_FACING, &lens));
-        auto cam_facing = (acamera_metadata_enum_acamera_lens_facing) lens.data.u8[0];
-
-        if ((cam_facing == this->facing) && (status == ACAMERA_OK)) {
-
-            cam_id = id_list->cameraIds[i];
-            CALL(ACameraManager_openCamera(manager, cam_id, &cameraDeviceCallbacks, &device))
-            LOGI("Camera facing %s, %d", facing, status)
-            break;
-        }
-        ACameraMetadata_free(metadata); // do not remove!
-    }
-}
-
-void NDKCamera::create_session(ANativeWindow* window) noexcept {
+void NDKCamera::create_session(void* win) noexcept {
 
     if (session_created) return;
+    LOGI("Creating session")
 
+    ANativeWindow* window = reinterpret_cast<ANativeWindow*>(win);
     ANativeWindow* jpg_window;
+
+    CALL(ACameraManager_openCamera(NDKManager::camera_manager.get(), camera_id, &cameraDeviceCallbacks, &device))
+    
+    auto container = output_container { [this]() {
+
+            ACaptureSessionOutputContainer* container{};
+            CALL(ACaptureSessionOutputContainer_create(&container));
+            return container;
+        }(), ACaptureSessionOutputContainer_free
+    };
 
     reader = image_reader { [&jpg_window, this]() {
 
@@ -218,11 +217,11 @@ void NDKCamera::create_session(ANativeWindow* window) noexcept {
     
     requests[PREVIEW_IDX].req_template = TEMPLATE_PREVIEW;
     requests[PREVIEW_IDX].window = {window, ANativeWindow_release};
-    requests[PHOTO_IDX].req_template = TEMPLATE_STILL_CAPTURE;
-    requests[PHOTO_IDX].window = {jpg_window, ANativeWindow_release};
+    requests[STILL_CAPTURE_IDX].req_template = TEMPLATE_STILL_CAPTURE;
+    requests[STILL_CAPTURE_IDX].window = {jpg_window, ANativeWindow_release};
 
     for (auto &req: requests) {
-
+      
         ANativeWindow_acquire(req.window.get());
 
         req.output = session_output {  [&req, this] () {
@@ -232,7 +231,7 @@ void NDKCamera::create_session(ANativeWindow* window) noexcept {
                     return output;
             }(), ACaptureSessionOutput_free
         };
-        CALL(ACaptureSessionOutputContainer_add(container, req.output.get()));
+        CALL(ACaptureSessionOutputContainer_add(container.get(), req.output.get()));
 
         req.target = output_target { [&req, this] () {
 
@@ -252,9 +251,23 @@ void NDKCamera::create_session(ANativeWindow* window) noexcept {
         CALL(ACaptureRequest_addTarget(req.request.get(), req.target.get()))
     }
     
-    CALL(ACameraDevice_createCaptureSession(device, container, &sessionStateCallbacks, &session))
+    CALL(ACameraDevice_createCaptureSession(device, container.get(), &sessionStateCallbacks, &session))
+    CALL(ACaptureSessionOutputContainer_remove(container.get(), requests[PREVIEW_IDX].output.get()))
+    CALL(ACaptureSessionOutputContainer_remove(container.get(), requests[STILL_CAPTURE_IDX].output.get()))
     session_created = true; 
     LOGI("Preview session created, %d", status)
+}
+
+void NDKCamera::close_session() noexcept {
+
+    if (session_created) {
+
+        ACameraCaptureSession_close(session);
+        CALL(ACameraDevice_close(device));
+        device = nullptr;
+        session_created = false;
+        LOGI("Session closed")
+    }
 }
 
 void NDKCamera::take_photo(const char* path) noexcept {
@@ -262,9 +275,9 @@ void NDKCamera::take_photo(const char* path) noexcept {
     if (preview_started) {
 
         dcim = path;
-        ACaptureRequest* request = requests[PHOTO_IDX].request.get();
+        ACaptureRequest* request = requests[STILL_CAPTURE_IDX].request.get();
         CALL(ACameraCaptureSession_capture(
-            session, &captureCallbacks, 1, &request, &requests[PHOTO_IDX].sequence))
+            session, &captureCallbacks, 1, &request, &requests[STILL_CAPTURE_IDX].sequence))
     }
 }
 
@@ -277,20 +290,22 @@ void NDKCamera::start_preview(bool start) noexcept {
         CALL(ACameraCaptureSession_setRepeatingRequest(session, nullptr, 1, &request, nullptr))  
         preview_started = true; 
     } else {
-        
+
+        if (!preview_started) return;
         CALL(ACameraCaptureSession_stopRepeating(session))
+        LOGI("Preview stopped")
         preview_started = false;
     }
 }
 
-void NDKCamera::still_capture_size(AIMAGE_FORMATS format) {
+void NDKCamera::calc_still_capture_size(AIMAGE_FORMATS format) {
 
-    avalabale_stream_conf(format, [] (int32_t width, int32_t height) {
+    avalabale_stream_conf(format, [this] (int32_t width, int32_t height) {
 
-            still_cap_width = std::max(still_cap_width, width);
-            still_cap_height = std::max(still_cap_height, height);
+            this->still_cap_width = std::max(this->still_cap_width, width);
+            this->still_cap_height = std::max(this->still_cap_height, height);
     });
-    LOGI("Still capture size, %d x %d", still_cap_width, still_cap_height)
+    LOGI("Still capture size, %d x %d", this->still_cap_width, this->still_cap_height)
 }
 
 void NDKCamera::avalabale_stream_conf(AIMAGE_FORMATS format, 
@@ -328,7 +343,6 @@ void NDKCamera::calc_compatible_preview_size(int32_t width, int32_t height, int3
                   min = diff;
                   out_compatible_res[0] = w;
                   out_compatible_res[1] = h;
-                  buffer_width = w; buffer_height = h;
             }
     });
     LOGI("Compatible preview size, %d x %d", out_compatible_res[0], out_compatible_res[1])
@@ -344,7 +358,7 @@ int32_t NDKCamera::sensor_orientation() noexcept {
 
 void NDKCamera::init_surface(int32_t texture_id) noexcept {
 
-    ogl::Properties props {screen_width, screen_height, buffer_width, buffer_height, sensor_orientation(), texture_id};
+    ogl::Properties props {screen_width, screen_height, 0, 0, sensor_orientation(), texture_id};
     ogl::init_surface(props);
 }
 

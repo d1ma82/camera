@@ -7,11 +7,11 @@ class CameraWrapper {
     private val logTag = "CameraWrapper"
 
     private external fun greeting(name: String): String
-    external fun create(cameraFacing: String, dcim: String):Long
+    external fun create(camera: String, dcim: String):Long
     external fun delete(camera: Long)
+    external fun selectCamera(camera: Long, index:Int)
     external fun compatibleResolution(camera: Long, width: Int, height: Int):IntArray
-    external fun onPreviewSurfaceCreated(camera: Long, surface: Surface, texture_id: Int = 0)
-    external fun onPreviewSurfaceDestroyed(camera: Long, surface: Surface?)
+    external fun onPreviewSurfaceCreated(camera: Long, surface: Surface, texture_id: Int)
     external fun onDrawFrame(camera: Long)
     external fun nextShader(camera: Long)
     external fun takePhoto(camera: Long)

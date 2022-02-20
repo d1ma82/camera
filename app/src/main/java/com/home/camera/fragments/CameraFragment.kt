@@ -44,7 +44,7 @@ class CameraFragment: Fragment(), TextureView.SurfaceTextureListener{
         val compatibleResolution = cameraWrapper.compatibleResolution(cameraHandle, 1600, 1200)
         surfaceTexture.setDefaultBufferSize(compatibleResolution[0], compatibleResolution[1])
         surface = Surface(surfaceTexture)
-        cameraWrapper.onPreviewSurfaceCreated(cameraHandle, surface)
+        cameraWrapper.onPreviewSurfaceCreated(cameraHandle, surface, 0)
     }
 
     override fun onSurfaceTextureSizeChanged(p0: SurfaceTexture, width: Int, height: Int) {
@@ -54,7 +54,6 @@ class CameraFragment: Fragment(), TextureView.SurfaceTextureListener{
     override fun onSurfaceTextureDestroyed(p0: SurfaceTexture): Boolean {
 
         Log.d(logTag, "onSurfaceTextureDestroyed")
-        cameraWrapper.onPreviewSurfaceDestroyed(cameraHandle, surface)
         cameraWrapper.delete(cameraHandle)
         cameraHandle = 0
         return true

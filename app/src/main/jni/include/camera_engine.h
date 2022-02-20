@@ -1,21 +1,12 @@
 #ifndef _CAMERA_ENGINE_H
 #define _CAMERA_ENGINE_H
 
-#include "camera_manager.h"
-#include <string>
+#include "custom_camera.h"
 #include <jni.h>
 
 class CameraEngine { 
-private:
-
-    JNIEnv* env;
-    jobject instance;
-    jstring requested_facing;
-    NDKCamera* camera;
-    std::string dcim;
-
 public: 
-    explicit CameraEngine(JNIEnv* env, jobject instance, jstring facing, jstring dcim);
+    explicit CameraEngine(JNIEnv* env, jobject instance, jstring dcim);
        // copy-move disabled
     CameraEngine(const CameraEngine&) = delete;
     CameraEngine(CameraEngine&&) = delete;
@@ -23,9 +14,17 @@ public:
     CameraEngine& operator=(CameraEngine&&) = delete;
     ~CameraEngine();  
 
-    NDKCamera* operator->() {return camera;}
+    CustomCamera* operator->() {return selected;};
 
-    inline const char* get_dcim() const {return dcim.c_str();}
+    inline const char* get_dcim() const {return dcim;};
+    void add_camera_kindof(jstring kind);
+    void select_camera(uint32_t id);
+    
+private:
+    JNIEnv* env;
+    jobject instance;
+    char* dcim = nullptr;
+    CustomCamera* selected = nullptr;
 };
 
 #endif
