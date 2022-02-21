@@ -1,3 +1,13 @@
+/*
+ *  2022 NDK Camera2 API project
+ *
+ *  Author: Zverintsev Dima
+ * 
+ *  OpenGL Renderer.
+ *  Have some preview filters
+ *  Filters do not affect to the photo
+ */
+
 #ifndef _OPENGL_H
 #define _OPENGL_H
 
@@ -15,7 +25,7 @@ namespace ogl {
     } Properties;
 
     void init_surface (const Properties& properties);
-    void next_shader();
+    void next_filter();
     void draw_frame();
     void destroy();
 }

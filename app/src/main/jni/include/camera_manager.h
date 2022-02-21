@@ -1,3 +1,13 @@
+/*
+ *  2022 NDK Camera2 API project
+ *
+ *  Author: Zverintsev Dima
+ * 
+ *  Controls the android camera through the Camera2 API.
+ *  Image rendered on SurfaceTexture using OpenGL
+ *  The photo is captured with ImageReader
+ */
+
 #ifndef _CAMERA_MANAGER_H
 #define _CAMERA_MANAGER_H
 

@@ -34,7 +34,8 @@ class CameraFragmentGL:Fragment(), View.OnTouchListener, View.OnClickListener {
         val aDirArray: Array<File> = ContextCompat.getExternalFilesDirs(requireContext(), Environment.DIRECTORY_DCIM)
         dcim = aDirArray[0].path
         Log.d(logTag, dcim)
-        binding.fab.setOnClickListener(this)
+        binding.fabTakePhoto.setOnClickListener(this)
+        binding.fabFlipCamera.setOnClickListener(this)
 
         surfaceView = binding.surfaceView
         surfaceView.setEGLContextClientVersion(3)
@@ -78,9 +79,10 @@ class CameraFragmentGL:Fragment(), View.OnTouchListener, View.OnClickListener {
         }
     }
 
-    override fun onClick(p0: View?) {
+    override fun onClick(view: View?) {
 
-        camRenderer.takePhoto()
+        if (view == binding.fabTakePhoto) camRenderer.takePhoto()
+        else if (view == binding.fabFlipCamera) camRenderer.flipCamera()
     }
 
 }

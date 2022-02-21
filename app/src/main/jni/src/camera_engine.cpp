@@ -17,7 +17,7 @@ CameraEngine::CameraEngine(JNIEnv* env, jobject instance, jstring in_dcim):
 
 CameraEngine::~CameraEngine() {
 
-    delete dcim;
+    delete[] dcim;
     for (auto el: cameras) delete el;
     cameras.resize(0);
 }

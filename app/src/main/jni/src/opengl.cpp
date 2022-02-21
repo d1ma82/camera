@@ -92,10 +92,7 @@ static const char fragment_predator_src[] = R"(
         gl_FragColor = vec4(rgb, 1.0);
     })";
 
-// Note that the coordinates of this shape are defined in a counterclockwise order. 
-// The drawing order is important because it defines which side is the front face of the shape, 
-// which you typically want to have drawn, and the back face, which you can choose to not draw 
-// using the OpenGL ES cull face feature
+
 static float vertices[] {
 //   x   y   z    s   t  
     -1,  1, .0f,  0,  1,      // top left
@@ -147,7 +144,7 @@ GLuint create_program (GLuint vertex_shader, GLuint fragment_shader) {
     return prog;
 }
 
-void ogl::next_shader() {
+void ogl::next_filter() {
 
     switch (current_program->type) {
         default: 

@@ -34,8 +34,9 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
         cameraWrapper.nextShader(cameraHandle)
     }
 
-    fun nextCamera() {
+    fun flipCamera() {
 
+        Log.d(logTag, "flipCamera")
         selectedCamera++
         if (selectedCamera >= 2) selectedCamera = 0
         cameraWrapper.selectCamera(cameraHandle, selectedCamera)
@@ -43,8 +44,9 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
     }
 
     fun takePhoto() {
-        //cameraWrapper.takePhoto(cameraHandle)
-        nextCamera()
+
+        Log.d(logTag, "takePhoto")
+        cameraWrapper.takePhoto(cameraHandle)
     }
 
     override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
@@ -72,15 +74,12 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
 
     override fun onDrawFrame(p0: GL10?) {
 
-       // Log.d(logTag, "onDrawFrame")
         if (!view.isEnabled) return
-       // Log.d(logTag, texMatrix.contentToString())
         cameraWrapper.onDrawFrame(cameraHandle)
     }
 
     override fun onFrameAvailable(p0: SurfaceTexture?) {
 
-       // Log.d(logTag, "onFrameAvailable")
         if (!view.isEnabled) return
         view.queueEvent{
 
@@ -88,8 +87,4 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
             view.requestRender()
         }
     }
-    //      [0.0, -1.0, 0.0, 0.0,
-        //  -1.0, 0.0, 0.0, 0.0,
-        //  0.0, 0.0, 1.0, 0.0,
-        //  1.0, 1.0, 0.0, 1.0]
 }

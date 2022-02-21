@@ -368,5 +368,5 @@ void NDKCamera::draw_frame() noexcept {
 }
 
 void NDKCamera::next_shader() noexcept {
-    ogl::next_shader();
+    ogl::next_filter();
 }
