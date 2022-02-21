@@ -8,7 +8,7 @@ Simple NDK camera API
 
 ### Build require
 
-- Cmake, Ninja and glm libs.
+- [Cmake](https://cmake.org/), [Ninja](https://ninja-build.org/) and [GLM](https://github.com/g-truc/glm) libs.
 #### Environment variables:
 - Add To Path Cmake and Ninja
 - Add ANDROID_NDK location
