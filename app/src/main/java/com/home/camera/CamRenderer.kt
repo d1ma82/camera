@@ -18,6 +18,7 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
     private val textures = IntArray(1)
     private lateinit var surfaceTexture: SurfaceTexture
     private lateinit var surface: Surface
+   // private var arr = FloatArray(16)
     private val cameraWrapper = CameraWrapper()
     private var selectedCamera:Int = 0
 
@@ -84,6 +85,8 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
         view.queueEvent{
 
             p0?.updateTexImage()
+            //p0?.getTransformMatrix(arr)
+           // Log.d(logTag, arr.contentToString())
             view.requestRender()
         }
     }

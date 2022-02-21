@@ -18,7 +18,7 @@
 #else
 #define LOGD(...);
 #define ASSERT(cond, fmt, ...);
-#define CALL(func);
+#define CALL(func) status = func;
 #endif
 
 

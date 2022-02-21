@@ -323,7 +323,7 @@ void NDKCamera::avalabale_stream_conf(AIMAGE_FORMATS format,
         if (entry.data.i32[i+0] == format) {
 
             callback(entry.data.i32[i+1], entry.data.i32[i+2]);
-            LOGI("AVALABLE CONFIGURATION, %d x %d", entry.data.i32[i+1], entry.data.i32[i+2])
+            LOGD("AVALABLE CONFIGURATION, %d x %d", entry.data.i32[i+1], entry.data.i32[i+2])
         }
     }     
 }
@@ -352,7 +352,7 @@ int32_t NDKCamera::sensor_orientation() noexcept {
 
     ACameraMetadata_const_entry entry = {0};
     CALL(ACameraMetadata_getConstEntry(metadata, ACAMERA_SENSOR_ORIENTATION, &entry))
-    LOGI("ACAMERA_SENSOR_ORIENTATION, %d", entry.data.i32[0])
+    LOGD("ACAMERA_SENSOR_ORIENTATION, %d", entry.data.i32[0])
     return entry.data.i32[0];
 }
 

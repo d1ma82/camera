@@ -5,12 +5,13 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/string_cast.hpp>
+//#include <glm/gtx/string_cast.hpp>
 
 GLint vertex_position, st, tex_sampler, transform;
 GLuint buffers[2];
 
 static ogl::Properties properties;
+static bool initialized = false;
 
 enum Type {NORMAL, BLUR, PREDATOR, COUNT} ;
 
@@ -103,6 +104,20 @@ static float vertices[] {
 
 static GLuint indices[] { 0, 1, 2, 0, 1, 3 };
 
+static glm::mat4 st_coord {
+        0, 1, 0, 0,
+        1, 0, 0, 0,
+        0, 0, 0, 0,
+        1, 1, 0, 0  
+};
+
+static glm::mat4 flip_v  {
+        1,  0, 0, 0,
+        0, -1, 0, 0,
+        0,  0, 1, 0,
+        0,  1, 0, 1  
+};
+
 glm::mat4 compensate_matrix = glm::mat4(1.0f);
 
 GLuint create_shader (const char* src, GLenum type) {
@@ -157,26 +172,17 @@ void ogl::next_filter() {
 // This code is need to be tested in other devices
 void calc_compesate_matrix() {
 
-    glm::mat4 st {
-        0, 1, 0, 0,
-        1, 0, 0, 0,
-        0, 0, 0, 0,
-        1, 1, 0, 0
-    };
-
-    if (properties.sensor_orient == 90) 
-        compensate_matrix = st * glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0,0,1));
+    compensate_matrix = st_coord * glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0,0,1));
     
-    LOGI("Compensate matrix= %s", glm::to_string(compensate_matrix).c_str())
+    if (properties.sensor_orient == 270) compensate_matrix *= flip_v;
 }
 
 void ogl::init_surface (const Properties& props) {
 
-    if (properties.texture_id == props.texture_id) return; // on android side onSurfaceChanged may call couple times
+    properties = props;             // properties can change during application run, so it need to be updated
+    calc_compesate_matrix();        // And recalculate compensate matrix
+    if (initialized) return; 
 
-    properties = props;
-
-    calc_compesate_matrix();
     programs.resize(COUNT);
 
     int i = 0;
@@ -206,6 +212,7 @@ void ogl::init_surface (const Properties& props) {
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
+    initialized = true;
 
     LOGI("Init surface %d x %d; texture_id = %d", properties.screen_width, properties.screen_height, properties.texture_id)
 }
@@ -251,4 +258,5 @@ void ogl::destroy() {
     programs.resize(0);
     current_program = nullptr;
     properties = {0,0,0,0,0,0};
+    initialized = false;
 }
