@@ -23,3 +23,6 @@ ninja -C ./build
 ```
 
 With native lib compiled you can open project in Android studio
+
+## Questions
+dimazverincevchanel@gmail.com
