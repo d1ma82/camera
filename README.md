@@ -1,6 +1,7 @@
 # NDK camera
 
-Simple NDK camera API
+Simple NDK camera2 application with GUI on kotlin and  
+camera, openGL rendering and filtering (blur, thermal vision) in C++
 
 * API Level 24+
 
