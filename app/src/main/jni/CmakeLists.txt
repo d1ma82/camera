@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 
-add_compile_definitions(RELEASE)
+add_compile_definitions(DEBUG)
 #set(OpenCV_DIR "D:/OpenCV/android_4_5_4/install/sdk/native/jni")
 #cmake_path(CONVERT $ENV{GLM} TO_CMAKE_PATH_LIST GLM)
 cmake_path(CONVERT $ENV{ANDROID_NDK} TO_CMAKE_PATH_LIST ANDROID_NDK)

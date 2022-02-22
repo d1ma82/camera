@@ -1,21 +1,15 @@
 #include "opengl.h"
 #include "log.h"
+#include "matrix.h"
 #include <GLES3/gl3.h>
 #include <GLES2/gl2ext.h>
 #include <vector>
-
-const int32_t MATRIX_SIZE = 16;
 
 GLint vertex_position, st, tex_sampler, transform;
 GLuint buffers[2];
 
 static ogl::Properties properties;
 static bool initialized = false;
-
-typedef struct mat4 {
-    float data[MATRIX_SIZE];
-    inline float& operator[](int32_t i) {return data[i];}
-} mat4;
 
 enum Type {NORMAL, BLUR, PREDATOR, COUNT} ;
 
@@ -108,58 +102,35 @@ static float vertices[] {
 
 static GLuint indices[] { 0, 1, 2, 0, 1, 3 };
 
-static const mat4 ident {
+static mtx::mat<float, 4, 4> ident {
         1, 0, 0, 0,
         0, 1, 0, 0,
         0, 0, 1, 0,
         0, 0, 0, 1  
 };
 
-static const mat4 st_coord {
+static mtx::mat<float, 4, 4> st_coord {
         0, 1, 0, 0,
         1, 0, 0, 0,
         0, 0, 0, 0,
         1, 1, 0, 0  
 };
 
-static const  mat4 flip_v {
+static mtx::mat<float, 4, 4> flip_v {
         1,  0, 0, 0,
         0, -1, 0, 0,
         0,  0, 1, 0,
         0,  1, 0, 1  
 };
 
-static const mat4 rot180_z {
+static mtx::mat<float, 4, 4> rot180_z {
        -1,  0, 0, 0,
         0, -1, 0, 0,
         0,  0, 1, 0,
         0,  0, 0, 1,
 };
 
-mat4 compensate_matrix {ident};
-
-/*
-            4x4 matrix only
-        a1 a2       b1 b2       r1 = a1*b1 + a2*b3  r2 = a1*b2 + a2*b4
-        a3 a4   x   b3 b4       r3 = a3*b1 + a4*b3  r4 = a3*b2 + a4*b4
-        ...................
-*/
-mat4 operator * (mat4 a, mat4 b) {
-
-    mat4 result;
-    int32_t stride = MATRIX_SIZE/4;
-    int32_t bi = 0, ai = 0, k = 0;
-    for (int32_t i=0; i<MATRIX_SIZE; i++) {
-      
-        float i1 = a[ai++] * b[bi];
-        float i2 = a[ai++] * b[bi+stride];
-        float i3 = a[ai++] * b[bi+2*stride];
-        float i4 = a[ai++] * b[bi+3*stride];
-        if (++bi == 4) { k+=4; ai=k; bi=0; } else { ai=k; }
-        result[i] = i1 + i2 + i3 + i4;
-    };
-    return result;
-} 
+mtx::mat<float, 4, 4> compensate_matrix {ident};
 
 GLuint create_shader (const char* src, GLenum type) {
 
@@ -212,10 +183,12 @@ void ogl::next_filter() {
 
 // This code is need to be tested in other devices
 void calc_compesate_matrix() {
-
+    
     compensate_matrix = rot180_z * st_coord;
     
     if (properties.sensor_orient == 270) compensate_matrix = flip_v * compensate_matrix;
+
+    LOGI("%s", to_string(compensate_matrix));
 }
 
 void ogl::init_surface (const Properties& props) {
