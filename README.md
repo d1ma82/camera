@@ -9,7 +9,7 @@ camera, openGL rendering and filtering (blur, thermal vision) in C++
 
 ### Build require
 
-- [Cmake](https://cmake.org/), [Ninja](https://ninja-build.org/) and [GLM](https://github.com/g-truc/glm) libs.
+- [Cmake](https://cmake.org/), [Ninja](https://ninja-build.org/) libs.
 - To specify [ABI](https://developer.android.com/ndk/guides/abis) use CmakeLists.txt file in \camera\app\src\main\jni.
 - By defaul x86-64 selected
 #### Environment variables:
