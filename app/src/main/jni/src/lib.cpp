@@ -60,7 +60,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_home_camera_CameraWrapper_delete(
  *      select camera with index
  *      
  */
-extern "C" JNIEXPORT void JNICALL Java_com_home_camera_CameraWrapper_selectCamera(
+extern "C" JNIEXPORT void JNICALL Java_com_home_camera_CameraWrapper_flipCamera(
     JNIEnv* env, 
     jobject instance,
     jlong cam_obj,
@@ -71,7 +71,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_home_camera_CameraWrapper_selectCamer
 
     (*app)->start_preview(false);
     (*app)->close_session();
-    app->select_camera(index);
+    app->flip_camera(index);
 }
 
 /**

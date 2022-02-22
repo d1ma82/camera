@@ -266,7 +266,7 @@ void NDKCamera::close_session() noexcept {
         CALL(ACameraDevice_close(device));
         device = nullptr;
         session_created = false;
-        LOGI("Session closed")
+        LOGI("Session closed status= %d", status)
     }
 }
 
@@ -293,7 +293,7 @@ void NDKCamera::start_preview(bool start) noexcept {
 
         if (!preview_started) return;
         CALL(ACameraCaptureSession_stopRepeating(session))
-        LOGI("Preview stopped")
+        LOGI("Preview stopped status= %d", status)
         preview_started = false;
     }
 }

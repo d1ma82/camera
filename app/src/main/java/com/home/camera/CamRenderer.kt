@@ -40,7 +40,7 @@ class CamRenderer(private val view: GLSurfaceView, private val dcim: String):
         Log.d(logTag, "flipCamera")
         selectedCamera++
         if (selectedCamera >= 2) selectedCamera = 0
-        cameraWrapper.selectCamera(cameraHandle, selectedCamera)
+        cameraWrapper.flipCamera(cameraHandle, selectedCamera)
         onSurfaceChanged(null, view.width, view.height)
     }
 

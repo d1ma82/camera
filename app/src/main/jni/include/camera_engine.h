@@ -35,10 +35,9 @@ public:
     */
     void add_camera_kindof(jstring kind);
     /*
-      Select a camera from array
-      'id' is an array index
+      Flip 'to' camera, 'to' is an array index
     */
-    void select_camera(uint32_t id);
+    void flip_camera(uint32_t to);
     
 private:
     JNIEnv* env;

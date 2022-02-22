@@ -22,13 +22,13 @@ CameraEngine::~CameraEngine() {
     cameras.resize(0);
 }
 
-void CameraEngine::select_camera(uint32_t id) {
+void CameraEngine::flip_camera(uint32_t to) {
     
-    ASSERT(id <= cameras.size()-1, "CameraEngine::select_camera: index out of bounds, %d", id)
+    ASSERT(to <= cameras.size()-1, "CameraEngine::select_camera: index out of bounds, %d", to)
 
-    selected = cameras[id];
+    selected = cameras[to];
     ASSERT(selected != nullptr, "CameraEngine selected = NULL")
-    LOGI("Select camera facing= %d", id)
+    LOGI("Select camera facing= %d", to)
 }
 
 void CameraEngine::add_camera_kindof(jstring kind) {
@@ -42,7 +42,7 @@ void CameraEngine::add_camera_kindof(jstring kind) {
         for (int i=cameras.size(); i<cameras.size()+count; i++)     
                                     cameras.push_back(new NDKCamera(--count));
 
-        select_camera(count);
+        flip_camera(count);
     }
     env->ReleaseStringUTFChars(kind, kind_);
     ASSERT(cameras.size() > 0, "Warning: Cameras array empty.")

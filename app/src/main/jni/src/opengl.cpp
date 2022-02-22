@@ -3,15 +3,19 @@
 #include <GLES3/gl3.h>
 #include <GLES2/gl2ext.h>
 #include <vector>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-//#include <glm/gtx/string_cast.hpp>
+
+const int32_t MATRIX_SIZE = 16;
 
 GLint vertex_position, st, tex_sampler, transform;
 GLuint buffers[2];
 
 static ogl::Properties properties;
 static bool initialized = false;
+
+typedef struct mat4 {
+    float data[MATRIX_SIZE];
+    inline float& operator[](int32_t i) {return data[i];}
+} mat4;
 
 enum Type {NORMAL, BLUR, PREDATOR, COUNT} ;
 
@@ -104,21 +108,58 @@ static float vertices[] {
 
 static GLuint indices[] { 0, 1, 2, 0, 1, 3 };
 
-static glm::mat4 st_coord {
+static const mat4 ident {
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1  
+};
+
+static const mat4 st_coord {
         0, 1, 0, 0,
         1, 0, 0, 0,
         0, 0, 0, 0,
         1, 1, 0, 0  
 };
 
-static glm::mat4 flip_v  {
+static const  mat4 flip_v {
         1,  0, 0, 0,
         0, -1, 0, 0,
         0,  0, 1, 0,
         0,  1, 0, 1  
 };
 
-glm::mat4 compensate_matrix = glm::mat4(1.0f);
+static const mat4 rot180_z {
+       -1,  0, 0, 0,
+        0, -1, 0, 0,
+        0,  0, 1, 0,
+        0,  0, 0, 1,
+};
+
+mat4 compensate_matrix {ident};
+
+/*
+            4x4 matrix only
+        a1 a2       b1 b2       r1 = a1*b1 + a2*b3  r2 = a1*b2 + a2*b4
+        a3 a4   x   b3 b4       r3 = a3*b1 + a4*b3  r4 = a3*b2 + a4*b4
+        ...................
+*/
+mat4 operator * (mat4 a, mat4 b) {
+
+    mat4 result;
+    int32_t stride = MATRIX_SIZE/4;
+    int32_t bi = 0, ai = 0, k = 0;
+    for (int32_t i=0; i<MATRIX_SIZE; i++) {
+      
+        float i1 = a[ai++] * b[bi];
+        float i2 = a[ai++] * b[bi+stride];
+        float i3 = a[ai++] * b[bi+2*stride];
+        float i4 = a[ai++] * b[bi+3*stride];
+        if (++bi == 4) { k+=4; ai=k; bi=0; } else { ai=k; }
+        result[i] = i1 + i2 + i3 + i4;
+    };
+    return result;
+} 
 
 GLuint create_shader (const char* src, GLenum type) {
 
@@ -172,9 +213,9 @@ void ogl::next_filter() {
 // This code is need to be tested in other devices
 void calc_compesate_matrix() {
 
-    compensate_matrix = st_coord * glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0,0,1));
+    compensate_matrix = rot180_z * st_coord;
     
-    if (properties.sensor_orient == 270) compensate_matrix *= flip_v;
+    if (properties.sensor_orient == 270) compensate_matrix = flip_v * compensate_matrix;
 }
 
 void ogl::init_surface (const Properties& props) {
@@ -232,7 +273,7 @@ void ogl::draw_frame() {
     glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glUniform1i(tex_sampler, 0);
 
-    glUniformMatrix4fv(transform, 1, false, &compensate_matrix[0][0]);
+    glUniformMatrix4fv(transform, 1, false, &compensate_matrix[0]);
   
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
     glEnableVertexAttribArray(vertex_position);
