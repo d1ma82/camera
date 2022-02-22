@@ -32,7 +32,7 @@ namespace mtx {
     template<typename T, uint32_t a_cols, uint32_t a_rows, uint32_t b_cols, uint32_t b_rows>
     mat<T, b_cols, a_rows> operator*(mat<T, a_cols, a_rows>& a, mat<T, b_cols, b_rows>& b) {
 
-        ASSERT(a_cols == b_rows, "Invalid matrix")
+        ASSERT(a_rows == b_cols, "Invalid matrix")
 
         mtx::mat<T, b_cols, a_rows> result;
         int32_t bi = 0, ai = 0, k = 0;
