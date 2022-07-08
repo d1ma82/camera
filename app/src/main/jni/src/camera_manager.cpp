@@ -97,7 +97,7 @@ static void write_file(AImage* image) {
     int len = 0;
     uint8_t* data = nullptr;
     AImage_getPlaneData(image, 0, &data, &len);
-    DIR *dir = opendir(dcim);
+    DIR *dir = opendir(dcim);// Todo: Potentinal memory leak.
     if (dir) closedir(dir); else { LOGI("Invalid dcim path: %s", dcim) return; }
 
     struct timespec ts { 0, 0 };
